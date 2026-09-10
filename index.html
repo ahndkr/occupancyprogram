@@ -251,8 +251,9 @@
 
                 const totalIklan = nonCprp + cprp;
                 
-                // TOTAL CB DUR (Dur) sekarang diambil langsung dari SLOT DUR DATA 2
-                const cbDurMin = slotDurMin; 
+                // Mengambil nilai TOTAL CB DUR dari kolom INVENTORY di DATA 2
+                const rawInventory = row['INVENTORY'] || row.Inventory || row.inventory || 0;
+                const cbDurMin = timeToMinutes(rawInventory);
                 const cbPct = slotDurMin > 0 ? ((cbDurMin / slotDurMin) * 100).toFixed(1) + '%' : '0%';
                 
                 const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '0%';
