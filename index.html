@@ -9,47 +9,71 @@
     <!-- PapaParse for CSV fetch & parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        th, td { border: 1px solid #000; text-align: center; padding: 4px 6px; font-size: 13px; }
+        /* Desain Tabel Compact */
+        table { border-collapse: collapse; width: auto; font-size: 11px; }
+        th, td { 
+            border: 1px solid #6b7280; 
+            text-align: center; 
+            padding: 2px 5px; 
+            white-space: nowrap; /* Memaksa sel pas dengan isi teks */
+        }
         .bg-yellow-header { background-color: #FFFF00; }
         .bg-orange-header { background-color: #FCE4D6; }
     </style>
 </head>
-<body class="bg-gray-100 p-6 font-sans">
+<body class="bg-gray-100 p-4 font-sans text-gray-800">
 
-    <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
-        <div class="flex justify-between items-center mb-4 border-b pb-2">
-            <h1 class="text-2xl font-bold">REKAP OCCUPANCY DASHBOARD</h1>
+    <div class="max-w-full mx-auto bg-white p-4 rounded-lg shadow-md inline-block min-w-full">
+        <div class="flex justify-between items-center mb-3 border-b pb-2">
+            <h1 class="text-xl font-bold">REKAP OCCUPANCY DASHBOARD</h1>
             <!-- Status Loading -->
-            <div id="loadingStatus" class="text-sm font-semibold text-blue-600 animate-pulse">
+            <div id="loadingStatus" class="text-xs font-semibold text-blue-600 animate-pulse">
                 ⏳ Memuat data terbaru dari Google Sheets...
             </div>
         </div>
         
-        <!-- Controls & Program Filter -->
-        <div class="flex items-center gap-4 mb-6 bg-gray-50 p-4 rounded border">
-            <label class="font-semibold text-sm w-32">Pilih Program:</label>
-            <select id="programFilter" class="flex-1 p-2 border rounded font-semibold bg-white text-sm" disabled>
-                <option value="">-- Sedang mengambil data... --</option>
-            </select>
-            <button onclick="loadGoogleSheetData()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded text-xs font-semibold">
-                🔄 Refresh Manual
+        <!-- Controls & Filters (Program + Date Range) -->
+        <div class="flex flex-wrap items-center gap-3 mb-4 bg-gray-50 p-3 rounded border text-xs">
+            <div class="flex items-center gap-2">
+                <label class="font-semibold">Program:</label>
+                <select id="programFilter" class="p-1.5 border rounded font-semibold bg-white text-xs" disabled>
+                    <option value="">-- Sedang mengambil data... --</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2 border-l pl-3 border-gray-300">
+                <label class="font-semibold">Dari Tanggal:</label>
+                <input type="date" id="startDateFilter" class="p-1 border rounded bg-white text-xs">
+            </div>
+
+            <div class="flex items-center gap-2">
+                <label class="font-semibold">Sampai Tanggal:</label>
+                <input type="date" id="endDateFilter" class="p-1 border rounded bg-white text-xs">
+            </div>
+
+            <button onclick="resetDateFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded text-xs font-semibold">
+                Reset Tanggal
+            </button>
+
+            <button onclick="loadGoogleSheetData()" class="ml-auto bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold">
+                🔄 Refresh Data
             </button>
         </div>
 
         <!-- Dashboard Header Info -->
-        <div id="reportHeader" class="mb-4 hidden">
-            <h2 class="font-bold text-lg">REKAP OCCUPANCY</h2>
-            <p class="font-semibold text-gray-700 text-sm">PERIODE: <span id="periodeText">SEPTEMBER 2026</span></p>
-            <p class="font-semibold text-gray-700 text-sm">AS OF: <span id="asOfText">-</span></p>
+        <div id="reportHeader" class="mb-3 hidden">
+            <h2 class="font-bold text-base">REKAP OCCUPANCY</h2>
+            <p class="font-semibold text-gray-700 text-xs">PERIODE: <span id="periodeText">SEPTEMBER 2026</span></p>
+            <p class="font-semibold text-gray-700 text-xs">AS OF: <span id="asOfText">-</span></p>
             
-            <div id="programTitle" class="mt-4 p-2 font-bold text-center text-xl uppercase bg-yellow-300 border border-black">
+            <div id="programTitle" class="mt-2 p-1 font-bold text-center text-base uppercase bg-yellow-300 border border-black">
                 PROGRAM NAME
             </div>
         </div>
 
-        <!-- Table Display -->
+        <!-- Table Display (Compact Format) -->
         <div class="overflow-x-auto">
-            <table id="occupancyTable" class="w-full border-collapse hidden">
+            <table id="occupancyTable" class="hidden">
                 <thead>
                     <tr class="bg-yellow-header font-bold">
                         <th rowspan="2">Date</th>
@@ -75,19 +99,21 @@
     </div>
 
     <script>
-        // masukkan link CSV 'Publish to web' dari Google Sheets Anda di sini
-        const URL_DATA_1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=0&single=true&output=csv';
-        const URL_DATA_2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=271391032&single=true&output=csv';
+        // Masukkan link CSV 'Publish to web' Google Sheets Anda di sini
+        const URL_DATA_1 = 'LINK_PUBLISH_CSV_DATA_1_ANDA_DI_SINI';
+        const URL_DATA_2 = 'LINK_PUBLISH_CSV_DATA_2_ANDA_DI_SINI';
 
         let data1 = [];
         let data2 = [];
 
-        // Otomatis jalankan saat halaman HTML selesai dibuka
         document.addEventListener('DOMContentLoaded', () => {
             loadGoogleSheetData();
         });
 
+        // Event listener untuk memicu filter saat ada perubahan nilai
         document.getElementById('programFilter').addEventListener('change', renderTable);
+        document.getElementById('startDateFilter').addEventListener('change', renderTable);
+        document.getElementById('endDateFilter').addEventListener('change', renderTable);
 
         function loadGoogleSheetData() {
             const statusEl = document.getElementById('loadingStatus');
@@ -107,26 +133,22 @@
                         skipEmptyLines: true,
                         complete: function(res2) {
                             data2 = res2.data;
-                            statusEl.innerText = '✅ Data berhasil ter-update!';
+                            statusEl.innerText = '✅ Data ter-update!';
                             statusEl.classList.remove('animate-pulse', 'text-blue-600');
                             statusEl.classList.add('text-green-600');
                             
                             initDashboard();
                         },
-                        error: function() {
-                            showError('Gagal memuat DATA 2');
-                        }
+                        error: function() { showError('Gagal memuat DATA 2'); }
                     });
                 },
-                error: function() {
-                    showError('Gagal memuat DATA 1');
-                }
+                error: function() { showError('Gagal memuat DATA 1'); }
             });
         }
 
         function showError(msg) {
             const statusEl = document.getElementById('loadingStatus');
-            statusEl.innerText = '❌ ' + msg + '. Pastikan link Google Sheet sudah dipublish.';
+            statusEl.innerText = '❌ ' + msg + '. Pastikan link Google Sheet dipublish (CSV).';
             statusEl.classList.remove('animate-pulse', 'text-blue-600');
             statusEl.classList.add('text-red-600');
         }
@@ -138,14 +160,28 @@
             filter.innerHTML = programs.map(p => `<option value="${p}">${p}</option>`).join('');
             filter.disabled = false;
 
-            // Ambil tanggal max untuk teks "AS OF"
+            // Set Tanggal Min & Max otomatis pada input Date Picker
             const allDates = data1.map(d => d.TANGGAL).concat(data2.map(d => d.TGL)).filter(Boolean);
             if (allDates.length > 0) {
-                const maxDate = new Date(Math.max(...allDates.map(d => new Date(d))));
+                const sortedDates = allDates.map(d => new Date(d)).sort((a, b) => a - b);
+                const minDate = sortedDates[0].toISOString().split('T')[0];
+                const maxDate = sortedDates[sortedDates.length - 1].toISOString().split('T')[0];
+
+                document.getElementById('startDateFilter').min = minDate;
+                document.getElementById('startDateFilter').max = maxDate;
+                document.getElementById('endDateFilter').min = minDate;
+                document.getElementById('endDateFilter').max = maxDate;
+
                 const options = { day: '2-digit', month: 'short', year: '2-digit' };
-                document.getElementById('asOfText').innerText = maxDate.toLocaleDateString('en-GB', options).toUpperCase();
+                document.getElementById('asOfText').innerText = sortedDates[sortedDates.length - 1].toLocaleDateString('en-GB', options).toUpperCase();
             }
 
+            renderTable();
+        }
+
+        function resetDateFilter() {
+            document.getElementById('startDateFilter').value = '';
+            document.getElementById('endDateFilter').value = '';
             renderTable();
         }
 
@@ -164,6 +200,9 @@
 
         function renderTable() {
             const selectedProg = document.getElementById('programFilter').value;
+            const startDate = document.getElementById('startDateFilter').value;
+            const endDate = document.getElementById('endDateFilter').value;
+
             if (!selectedProg) return;
 
             document.getElementById('reportHeader').classList.remove('hidden');
@@ -173,7 +212,15 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
-            const progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
+            // Filter data2 (Jadwal Program) berdasarkan Rentang Tanggal
+            let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
+
+            if (startDate) {
+                progSchedules = progSchedules.filter(d => new Date(d.TGL) >= new Date(startDate));
+            }
+            if (endDate) {
+                progSchedules = progSchedules.filter(d => new Date(d.TGL) <= new Date(endDate));
+            }
 
             progSchedules.forEach(row => {
                 const date = row.TGL;
