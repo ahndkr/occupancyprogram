@@ -9,93 +9,107 @@
     <!-- PapaParse for CSV fetch & parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        /* Desain tabel ultra-compact & fit content */
-        table { table-layout: auto; width: max-content; min-width: 100%; }
+        /* Desain Compact: Padding rapat & teks kecil (11px-12px) */
         th, td { 
-            border: 1px solid #000; 
+            border: 1px solid #6b7280; 
             text-align: center; 
-            padding: 2px 5px; /* Compact padding */
-            font-size: 11px;  /* Ukuran font disesuaikan agar pas */
-            white-space: nowrap; /* Mencegah teks terpotong ke bawah */
+            padding: 2px 4px !important; 
+            font-size: 11px !important; 
+            white-space: nowrap;
         }
         .bg-yellow-header { background-color: #FFFF00; }
         .bg-orange-header { background-color: #FCE4D6; }
     </style>
 </head>
-<body class="bg-gray-100 p-4 font-sans text-gray-800">
+<body class="bg-gray-100 p-4 font-sans text-xs">
 
-    <div class="max-w-7xl mx-auto bg-white p-5 rounded-lg shadow-md">
-        <div class="flex justify-between items-center mb-3 border-b pb-2">
-            <h1 class="text-xl font-bold">REKAP OCCUPANCY DASHBOARD</h1>
+    <!-- Container dibuat inline-block / w-max agar lebar menyesuaikan isi tabel secara ringkas -->
+    <div class="inline-block min-w-full md:min-w-0 bg-white p-4 rounded-lg shadow-md border">
+        
+        <!-- Header Dashboard -->
+        <div class="flex justify-between items-center mb-3 border-b pb-2 gap-4">
+            <h1 class="text-base font-bold uppercase tracking-wide">REKAP OCCUPANCY DASHBOARD</h1>
             <div id="loadingStatus" class="text-xs font-semibold text-blue-600 animate-pulse">
-                ⏳ Memuat data terbaru dari Google Sheets...
+                ⏳ Memuat data dari Google Sheets...
             </div>
         </div>
         
-        <!-- Controls: Program & Filter Rentang Tanggal -->
-        <div class="flex flex-wrap items-center gap-3 mb-4 bg-gray-50 p-3 rounded border text-xs">
-            <div class="flex items-center gap-2">
-                <label class="font-semibold">Program:</label>
-                <select id="programFilter" class="p-1.5 border rounded font-semibold bg-white" disabled>
-                    <option value="">-- Memuat --</option>
+        <!-- Filter Bar (Program & Rentang Tanggal) -->
+        <div class="flex flex-wrap items-center gap-3 mb-4 bg-gray-50 p-2.5 rounded border">
+            <div class="flex items-center gap-1.5">
+                <label class="font-semibold text-xs">Program:</label>
+                <select id="programFilter" class="p-1 border rounded bg-white font-semibold min-w-[140px]" disabled>
+                    <option value="">-- Memuat... --</option>
                 </select>
             </div>
 
             <!-- Filter Rentang Tanggal -->
-            <div class="flex items-center gap-2 border-l pl-3">
-                <label class="font-semibold">Dari Tanggal:</label>
-                <input type="date" id="startDate" class="p-1 border rounded bg-white" onchange="renderTable()">
+            <div class="flex items-center gap-1.5 border-l pl-3 border-gray-300">
+                <label class="font-semibold text-xs">Dari:</label>
+                <input type="date" id="startDate" class="p-1 border rounded bg-white text-xs">
             </div>
 
-            <div class="flex items-center gap-2">
-                <label class="font-semibold">Sampai Tanggal:</label>
-                <input type="date" id="endDate" class="p-1 border rounded bg-white" onchange="renderTable()">
+            <div class="flex items-center gap-1.5">
+                <label class="font-semibold text-xs">Sampai:</label>
+                <input type="date" id="endDate" class="p-1 border rounded bg-white text-xs">
             </div>
 
-            <button onclick="loadGoogleSheetData()" class="ml-auto bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1.5 rounded text-xs font-semibold">
-                🔄 Refresh Manual
+            <button onclick="resetFilters()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded text-[11px] font-medium ml-auto">
+                Reset Filter
+            </button>
+            <button onclick="loadGoogleSheetData()" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-[11px] font-semibold">
+                🔄 Refresh Data
             </button>
         </div>
 
         <!-- Dashboard Header Info -->
         <div id="reportHeader" class="mb-3 hidden">
-            <h2 class="font-bold text-base">REKAP OCCUPANCY</h2>
-            <p class="font-semibold text-gray-700 text-xs">PERIODE: <span id="periodeText">SEPTEMBER 2026</span></p>
-            <p class="font-semibold text-gray-700 text-xs">AS OF (SHEET UPDATED): <span id="asOfText">-</span></p>
+            <div class="flex justify-between items-end mb-2">
+                <div>
+                    <h2 class="font-bold text-sm">REKAP OCCUPANCY</h2>
+                    <p class="font-semibold text-gray-600">PERIODE: <span id="periodeText">-</span></p>
+                </div>
+                <!-- Tanggal AS OF diambil dari waktu Google Sheets di-update/di-load -->
+                <p class="font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded border">
+                    AS OF: <span id="asOfText">-</span>
+                </p>
+            </div>
             
-            <div id="programTitle" class="mt-2 p-1.5 font-bold text-center text-lg uppercase bg-yellow-300 border border-black">
+            <div id="programTitle" class="p-1 font-bold text-center text-sm uppercase bg-yellow-300 border border-black tracking-wide">
                 PROGRAM NAME
             </div>
         </div>
 
-        <!-- Table Display (Compact Scroll) -->
+        <!-- Compact Table -->
         <div class="overflow-x-auto">
-            <table id="occupancyTable" class="border-collapse hidden">
+            <table id="occupancyTable" class="w-auto border-collapse hidden mx-auto">
                 <thead>
                     <tr class="bg-yellow-header font-bold">
-                        <th rowspan="2">Date</th>
-                        <th rowspan="2">Slot Time</th>
-                        <th rowspan="2">Slot Dur<br>(Menit)</th>
-                        <th colspan="2" class="bg-orange-header">TOTAL CB DUR</th>
-                        <th colspan="5">DURASI IKLAN (Menit)</th>
-                        <th rowspan="2" class="bg-orange-header">AVAIL</th>
+                        <th rowspan="2" class="px-2">Date</th>
+                        <th rowspan="2" class="px-1.5">Slot Time</th>
+                        <th rowspan="2" class="px-1.5">Slot Dur<br>(Menit)</th>
+                        <th colspan="2" class="bg-orange-header px-2">TOTAL CB DUR</th>
+                        <th colspan="5" class="px-2">DURASI IKLAN (Menit)</th>
+                        <th rowspan="2" class="bg-orange-header px-2">AVAIL</th>
                     </tr>
                     <tr class="bg-yellow-header font-bold">
-                        <th class="bg-orange-header">Dur</th>
-                        <th class="bg-orange-header">%</th>
-                        <th>NON CPRP</th>
-                        <th>%</th>
-                        <th>CPRP</th>
-                        <th>%</th>
-                        <th>TOTAL</th>
+                        <th class="bg-orange-header px-1.5">Dur</th>
+                        <th class="bg-orange-header px-1.5">%</th>
+                        <th class="px-1.5">NON CPRP</th>
+                        <th class="px-1">％</th>
+                        <th class="px-1.5">CPRP</th>
+                        <th class="px-1">％</th>
+                        <th class="px-1.5">TOTAL</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
+
     </div>
 
     <script>
+        // Masukkan link CSV Publish to Web dari Google Sheets Anda di sini
         const URL_DATA_1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=0&single=true&output=csv';
         const URL_DATA_2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=271391032&single=true&output=csv';
 
@@ -106,27 +120,16 @@
             loadGoogleSheetData();
         });
 
+        // Event listener untuk filter perubahan
         document.getElementById('programFilter').addEventListener('change', renderTable);
+        document.getElementById('startDate').addEventListener('change', renderTable);
+        document.getElementById('endDate').addEventListener('change', renderTable);
 
         function loadGoogleSheetData() {
             const statusEl = document.getElementById('loadingStatus');
-            statusEl.innerText = '⏳ Memuat data terbaru dari Google Sheets...';
+            statusEl.innerText = '⏳ Memuat data...';
             statusEl.classList.remove('hidden', 'text-green-600', 'text-red-600');
             statusEl.classList.add('text-blue-600', 'animate-pulse');
-
-            // Fetch Header Google Sheet untuk mendapatkan Last-Modified (AS OF Date)
-            fetch(URL_DATA_1, { method: 'HEAD' }).then(response => {
-                const lastModified = response.headers.get('Last-Modified');
-                if (lastModified) {
-                    const modDate = new Date(lastModified);
-                    const options = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' };
-                    document.getElementById('asOfText').innerText = modDate.toLocaleDateString('id-ID', options);
-                } else {
-                    document.getElementById('asOfText').innerText = 'Hari ini (Live)';
-                }
-            }).catch(() => {
-                document.getElementById('asOfText').innerText = 'Hari ini (Live)';
-            });
 
             Papa.parse(URL_DATA_1, {
                 download: true,
@@ -140,24 +143,34 @@
                         skipEmptyLines: true,
                         complete: function(res2) {
                             data2 = res2.data;
-                            statusEl.innerText = '✅ Data berhasil ter-update!';
+                            statusEl.innerText = '✅ Data Ter-update';
                             statusEl.classList.remove('animate-pulse', 'text-blue-600');
                             statusEl.classList.add('text-green-600');
                             
+                            // Set tanggal AS OF sesuai waktu data berhasil ditarik/di-update saat ini
+                            setAsOfDate();
                             initDashboard();
                         },
-                        error: () => showError('Gagal memuat DATA 2')
+                        error: function() { showError('Gagal memuat DATA 2'); }
                     });
                 },
-                error: () => showError('Gagal memuat DATA 1')
+                error: function() { showError('Gagal memuat DATA 1'); }
             });
         }
 
         function showError(msg) {
             const statusEl = document.getElementById('loadingStatus');
-            statusEl.innerText = '❌ ' + msg + '. Pastikan link Google Sheet sudah dipublish.';
+            statusEl.innerText = '❌ ' + msg;
             statusEl.classList.remove('animate-pulse', 'text-blue-600');
             statusEl.classList.add('text-red-600');
+        }
+
+        function setAsOfDate() {
+            const now = new Date();
+            const options = { day: '2-digit', month: 'short', year: '2-digit' };
+            // Format contoh: 12-OCT-26
+            const dateStr = now.toLocaleDateString('en-GB', options).replace(/ /g, '-').toUpperCase();
+            document.getElementById('asOfText').innerText = dateStr;
         }
 
         function initDashboard() {
@@ -183,6 +196,12 @@
             return `${d.getDate()}-${months[d.getMonth()]}`;
         }
 
+        function resetFilters() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            renderTable();
+        }
+
         function renderTable() {
             const selectedProg = document.getElementById('programFilter').value;
             if (!selectedProg) return;
@@ -197,14 +216,23 @@
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
 
+            // Filter jadwal berdasarkan Program & Rentang Tanggal
             let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
 
-            // Filter Berdasarkan Rentang Tanggal jika diisi
             if (startDateVal) {
                 progSchedules = progSchedules.filter(d => new Date(d.TGL) >= new Date(startDateVal));
             }
             if (endDateVal) {
                 progSchedules = progSchedules.filter(d => new Date(d.TGL) <= new Date(endDateVal));
+            }
+
+            // Update teks periode
+            if (progSchedules.length > 0) {
+                const dates = progSchedules.map(d => new Date(d.TGL));
+                const minD = new Date(Math.min(...dates));
+                const maxD = new Date(Math.max(...dates));
+                const opt = { month: 'long', year: 'numeric' };
+                document.getElementById('periodeText').innerText = `${minD.toLocaleDateString('id-ID', opt).toUpperCase()}`;
             }
 
             progSchedules.forEach(row => {
@@ -224,10 +252,15 @@
                 });
 
                 const totalIklan = nonCprp + cprp;
-                const cbDurMin = totalIklan;
+                
+                // Total CB Dur
+                const cbDurMin = parseFloat(row['CB DUR'] || row.CB_DUR || totalIklan); 
                 const cbPct = slotDurMin > 0 ? ((cbDurMin / slotDurMin) * 100).toFixed(1) + '%' : '0%';
+                
                 const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '0%';
                 const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '0%';
+
+                // Perhitungan AVAIL: Total CB Dur (Dur) - Total Durasi Iklan (Total)
                 const avail = (cbDurMin - totalIklan).toFixed(2);
 
                 const tr = document.createElement('tr');
@@ -242,7 +275,7 @@
                     <td>${cprp.toFixed(2)}</td>
                     <td class="font-bold">${cprpPct}</td>
                     <td class="font-semibold">${totalIklan.toFixed(2)}</td>
-                    <td class="bg-orange-50">${avail}</td>
+                    <td class="bg-orange-50 font-bold ${avail < 0 ? 'text-red-600' : 'text-gray-800'}">${avail}</td>
                 `;
                 tbody.appendChild(tr);
             });
