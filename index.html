@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Rekap Occupancy</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse for CSV fetch & parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        th, td { border: 1px solid #000; text-align: center; padding: 4px 6px; font-size: 13px; }
+        .bg-yellow-header { background-color: #FFFF00; }
+        .bg-orange-header { background-color: #FCE4D6; }
+    </style>
+</head>
+<body class="bg-gray-100 p-6 font-sans">
+
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h1 class="text-2xl font-bold">REKAP OCCUPANCY DASHBOARD</h1>
+            <!-- Status Loading -->
+            <div id="loadingStatus" class="text-sm font-semibold text-blue-600 animate-pulse">
+                ⏳ Memuat data terbaru dari Google Sheets...
+            </div>
+        </div>
+        
+        <!-- Controls & Program Filter -->
+        <div class="flex items-center gap-4 mb-6 bg-gray-50 p-4 rounded border">
+            <label class="font-semibold text-sm w-32">Pilih Program:</label>
+            <select id="programFilter" class="flex-1 p-2 border rounded font-semibold bg-white text-sm" disabled>
+                <option value="">-- Sedang mengambil data... --</option>
+            </select>
+            <button onclick="loadGoogleSheetData()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded text-xs font-semibold">
+                🔄 Refresh Manual
+            </button>
+        </div>
+
+        <!-- Dashboard Header Info -->
+        <div id="reportHeader" class="mb-4 hidden">
+            <h2 class="font-bold text-lg">REKAP OCCUPANCY</h2>
+            <p class="font-semibold text-gray-700 text-sm">PERIODE: <span id="periodeText">SEPTEMBER 2026</span></p>
+            <p class="font-semibold text-gray-700 text-sm">AS OF: <span id="asOfText">-</span></p>
+            
+            <div id="programTitle" class="mt-4 p-2 font-bold text-center text-xl uppercase bg-yellow-300 border border-black">
+                PROGRAM NAME
+            </div>
+        </div>
+
+        <!-- Table Display -->
+        <div class="overflow-x-auto">
+            <table id="occupancyTable" class="w-full border-collapse hidden">
+                <thead>
+                    <tr class="bg-yellow-header font-bold">
+                        <th rowspan="2">Date</th>
+                        <th rowspan="2">Slot Time</th>
+                        <th rowspan="2">Slot Dur<br>(Menit)</th>
+                        <th colspan="2" class="bg-orange-header">TOTAL CB DUR</th>
+                        <th colspan="5">DURASI IKLAN (Menit)</th>
+                        <th rowspan="2" class="bg-orange-header">AVAIL</th>
+                    </tr>
+                    <tr class="bg-yellow-header font-bold">
+                        <th class="bg-orange-header">Dur</th>
+                        <th class="bg-orange-header">%</th>
+                        <th>NON CPRP</th>
+                        <th>%</th>
+                        <th>CPRP</th>
+                        <th>%</th>
+                        <th>TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // masukkan link CSV 'Publish to web' dari Google Sheets Anda di sini
+        const URL_DATA_1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=0&single=true&output=csv';
+        const URL_DATA_2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=271391032&single=true&output=csv';
+
+        let data1 = [];
+        let data2 = [];
+
+        // Otomatis jalankan saat halaman HTML selesai dibuka
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGoogleSheetData();
+        });
+
+        document.getElementById('programFilter').addEventListener('change', renderTable);
+
+        function loadGoogleSheetData() {
+            const statusEl = document.getElementById('loadingStatus');
+            statusEl.innerText = '⏳ Memuat data terbaru dari Google Sheets...';
+            statusEl.classList.remove('hidden', 'text-green-600', 'text-red-600');
+            statusEl.classList.add('text-blue-600', 'animate-pulse');
+
+            Papa.parse(URL_DATA_1, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(res1) {
+                    data1 = res1.data;
+                    Papa.parse(URL_DATA_2, {
+                        download: true,
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: function(res2) {
+                            data2 = res2.data;
+                            statusEl.innerText = '✅ Data berhasil ter-update!';
+                            statusEl.classList.remove('animate-pulse', 'text-blue-600');
+                            statusEl.classList.add('text-green-600');
+                            
+                            initDashboard();
+                        },
+                        error: function() {
+                            showError('Gagal memuat DATA 2');
+                        }
+                    });
+                },
+                error: function() {
+                    showError('Gagal memuat DATA 1');
+                }
+            });
+        }
+
+        function showError(msg) {
+            const statusEl = document.getElementById('loadingStatus');
+            statusEl.innerText = '❌ ' + msg + '. Pastikan link Google Sheet sudah dipublish.';
+            statusEl.classList.remove('animate-pulse', 'text-blue-600');
+            statusEl.classList.add('text-red-600');
+        }
+
+        function initDashboard() {
+            const programs = [...new Set(data2.map(item => item.PROGRAM))].filter(Boolean).sort();
+            const filter = document.getElementById('programFilter');
+            
+            filter.innerHTML = programs.map(p => `<option value="${p}">${p}</option>`).join('');
+            filter.disabled = false;
+
+            // Ambil tanggal max untuk teks "AS OF"
+            const allDates = data1.map(d => d.TANGGAL).concat(data2.map(d => d.TGL)).filter(Boolean);
+            if (allDates.length > 0) {
+                const maxDate = new Date(Math.max(...allDates.map(d => new Date(d))));
+                const options = { day: '2-digit', month: 'short', year: '2-digit' };
+                document.getElementById('asOfText').innerText = maxDate.toLocaleDateString('en-GB', options).toUpperCase();
+            }
+
+            renderTable();
+        }
+
+        function timeToMinutes(timeStr) {
+            if (!timeStr) return 0;
+            const parts = timeStr.split(':').map(Number);
+            return (parts[0] || 0) * 60 + (parts[1] || 0) + (parts[2] || 0) / 60;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${d.getDate()}-${months[d.getMonth()]}`;
+        }
+
+        function renderTable() {
+            const selectedProg = document.getElementById('programFilter').value;
+            if (!selectedProg) return;
+
+            document.getElementById('reportHeader').classList.remove('hidden');
+            document.getElementById('occupancyTable').classList.remove('hidden');
+            document.getElementById('programTitle').innerText = selectedProg;
+
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
+
+            progSchedules.forEach(row => {
+                const date = row.TGL;
+                const slotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
+                const slotDurMin = timeToMinutes(row['SLOT DUR'] || row.SLOT_DUR);
+
+                const ads = data1.filter(d => d.PROGRAM === selectedProg && d.TANGGAL === date);
+
+                let nonCprp = 0;
+                let cprp = 0;
+
+                ads.forEach(ad => {
+                    const dur = parseFloat(ad['MENIT IKLAN'] || ad.MENIT_IKLAN || 0);
+                    if (ad.TIPE === 'NON CPRP') nonCprp += dur;
+                    if (ad.TIPE === 'CPRP') cprp += dur;
+                });
+
+                const totalIklan = nonCprp + cprp;
+                const cbDurMin = totalIklan;
+                const cbPct = slotDurMin > 0 ? ((cbDurMin / slotDurMin) * 100).toFixed(1) + '%' : '0%';
+                const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '0%';
+                const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '0%';
+                const avail = (cbDurMin - totalIklan).toFixed(2);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="font-medium">${formatDate(date)}</td>
+                    <td>${slotTime.substring(0, 5)}</td>
+                    <td>${Math.round(slotDurMin)}</td>
+                    <td class="bg-orange-50 font-semibold">${cbDurMin.toFixed(2)}</td>
+                    <td class="bg-orange-50">${cbPct}</td>
+                    <td>${nonCprp.toFixed(2)}</td>
+                    <td class="font-bold">${nonCprpPct}</td>
+                    <td>${cprp.toFixed(2)}</td>
+                    <td class="font-bold">${cprpPct}</td>
+                    <td class="font-semibold">${totalIklan.toFixed(2)}</td>
+                    <td class="bg-orange-50">${avail}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
