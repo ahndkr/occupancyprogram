@@ -308,9 +308,8 @@
                     <td>${cprp.toFixed(2)}</td>
                     <td class="font-bold">${cprpPct}</td>
                     <td class="font-semibold">${totalIklan.toFixed(2)}</td>
-                    <td class="bg-orange-50 font-bold ${avail < 0 ? 'text-red-600' : 'text-gray-800'}">${avail}</td>
-                    <td class="bg-orange-header font-bold text-gray-800">$ {availDisplay}</td>
-                `;
+                    <td class="bg-orange-50 font-bold ${availVal < 0 ? 'text-red-600' : 'text-gray-800'}">${availDisplay}</td>
+                ';
                 tbody.appendChild(tr);
             });
         }
