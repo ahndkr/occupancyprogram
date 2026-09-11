@@ -223,19 +223,30 @@
 
             let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
 
-            // Memotong string TGL agar berformat YYYY-MM-DD dan membandingkan string-nya langsung
-            if (startDateVal) { 
-            progSchedules = progSchedules.filter(d => {
-                const rowDate = d.TGL ? d.TGL.substring(0, 10) : '';
-                return rowDate >= startDateVal;
-    });
-}
+            // Fungsi pembantu untuk mengubah objek Date / String menjadi format 'YYYY-MM-DD' lokal
+            function toLocalISOString(dateInput) {
+                if (!dateInput) return '';
+                const d = new Date(dateInput);
+                if (isNaN(d.getTime())) return ''; // Jika tanggal tidak valid
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Filter tanggal yang aman dari masalah timezone
+            if (startDateVal) {
+                progSchedules = progSchedules.filter(d => {
+                    const rowDateStr = toLocalISOString(d.TGL);
+                    return rowDateStr >= startDateVal;
+                });
+            }
             if (endDateVal) {
-            progSchedules = progSchedules.filter(d => {
-            const rowDate = d.TGL ? d.TGL.substring(0, 10) : '';
-            return rowDate <= endDateVal;
-    });
-}
+                progSchedules = progSchedules.filter(d => {
+                    const rowDateStr = toLocalISOString(d.TGL);
+                    return rowDateStr <= endDateVal;
+                });
+            }
 
             if (progSchedules.length > 0) {
                 const dates = progSchedules.map(d => new Date(d.TGL));
