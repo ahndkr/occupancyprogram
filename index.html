@@ -223,12 +223,19 @@
 
             let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
 
-            if (startDateVal) {
-                progSchedules = progSchedules.filter(d => new Date(d.TGL) >= new Date(startDateVal));
-            }
+            // Memotong string TGL agar berformat YYYY-MM-DD dan membandingkan string-nya langsung
+            if (startDateVal) { 
+            progSchedules = progSchedules.filter(d => {
+                const rowDate = d.TGL ? d.TGL.substring(0, 10) : '';
+                return rowDate >= startDateVal;
+    });
+}
             if (endDateVal) {
-                progSchedules = progSchedules.filter(d => new Date(d.TGL) <= new Date(endDateVal));
-            }
+            progSchedules = progSchedules.filter(d => {
+            const rowDate = d.TGL ? d.TGL.substring(0, 10) : '';
+            return rowDate <= endDateVal;
+    });
+}
 
             if (progSchedules.length > 0) {
                 const dates = progSchedules.map(d => new Date(d.TGL));
