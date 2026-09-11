@@ -124,26 +124,11 @@
         document.getElementById('startDate').addEventListener('change', renderTable);
         document.getElementById('endDate').addEventListener('change', renderTable);
 
-        // Ambil waktu edit langsung dari baris pertama data Google Sheets
-        if (data1.length > 0 && data1[0].LAST_UPDATE) {
-            document.getElementById('asOfText').innerText = data1[0].LAST_UPDATE;
-
-                }
-            } catch (e) {
-                console.warn('Gagal mengambil Last-Modified header:', e);
-            }
-            return new Date(); // fallback jika header disembunyikan browser
-        }
-
-        async function loadGoogleSheetData() {
+        function loadGoogleSheetData() {
             const statusEl = document.getElementById('loadingStatus');
             statusEl.innerText = '⏳ Memuat data...';
             statusEl.classList.remove('hidden', 'text-green-600', 'text-red-600');
             statusEl.classList.add('text-blue-600', 'animate-pulse');
-
-            // Ambil info Last Modified dari header HTTP Google Sheet
-            const lastModDate = await fetchLastModified(URL_DATA_1);
-            setAsOfDate(lastModDate);
 
             Papa.parse(URL_DATA_1, {
                 download: true,
@@ -161,6 +146,8 @@
                             statusEl.classList.remove('animate-pulse', 'text-blue-600');
                             statusEl.classList.add('text-green-600');
                             
+                            // Ambil nilai tanggal/jam dari Header G1 di DATA 2
+                            updateAsOfFromData2();
                             initDashboard();
                         },
                         error: function() { showError('Gagal memuat DATA 2'); }
@@ -170,24 +157,25 @@
             });
         }
 
+        function updateAsOfFromData2() {
+            if (data2.length > 0) {
+                const headers = Object.keys(data2[0]);
+                // Mencari nama header kolom G1 yang berisi string tanggal/jam
+                const asOfHeader = headers.find(h => h.includes('-') || h.includes(':') || h.toUpperCase().includes('UPDATE')) || headers[headers.length - 1];
+
+                if (asOfHeader) {
+                    document.getElementById('asOfText').innerText = asOfHeader.trim();
+                } else {
+                    document.getElementById('asOfText').innerText = '-';
+                }
+            }
+        }
+
         function showError(msg) {
             const statusEl = document.getElementById('loadingStatus');
             statusEl.innerText = '❌ ' + msg;
             statusEl.classList.remove('animate-pulse', 'text-blue-600');
             statusEl.classList.add('text-red-600');
-        }
-
-        function setAsOfDate(dateObj) {
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-            const month = months[dateObj.getMonth()];
-            const year = String(dateObj.getFullYear()).slice(-2);
-            
-            const hours = String(dateObj.getHours()).padStart(2, '0');
-            const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-
-            // Format keluaran contoh: 11-SEP-26 14:30
-            document.getElementById('asOfText').innerText = `${day}-${month}-${year} ${hours}:${minutes}`;
         }
 
         function initDashboard() {
@@ -267,7 +255,7 @@
 
                 const totalIklan = nonCprp + cprp;
                 
-                // Ambil nilai dari kolom E (INVENTORY) di DATA 2 (langsung angka menit)
+                // Ambil nilai dari kolom E (INVENTORY) di DATA 2
                 const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0); 
                 
                 const cbPct = slotDurMin > 0 ? ((cbDurMin / slotDurMin) * 100).toFixed(1) + '%' : '0%';
