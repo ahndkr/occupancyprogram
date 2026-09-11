@@ -146,8 +146,8 @@
                             statusEl.classList.remove('animate-pulse', 'text-blue-600');
                             statusEl.classList.add('text-green-600');
                             
-                            // Ambil nilai tanggal/jam dari Header G1 di DATA 2
-                            updateAsOfFromData2();
+                            // Ambil nilai tanggal/jam dari Header G1 di DATA 1
+                            updateAsOfFromData1();
                             initDashboard();
                         },
                         error: function() { showError('Gagal memuat DATA 2'); }
@@ -157,9 +157,9 @@
             });
         }
 
-        function updateAsOfFromData2() {
-            if (data2.length > 0) {
-                const headers = Object.keys(data2[0]);
+        function updateAsOfFromData1() {
+            if (data1.length > 0) {
+                const headers = Object.keys(data1[0]);
                 // Mencari nama header kolom G1 yang berisi string tanggal/jam
                 const asOfHeader = headers.find(h => h.includes('-') || h.includes(':') || h.toUpperCase().includes('UPDATE')) || headers[headers.length - 1];
 
