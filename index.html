@@ -293,13 +293,16 @@
                 const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '0%';
 
                 // Rumus AVAIL: TOTAL CB DUR (Dur) - TOTAL DURASI IKLAN (Total)
+                // Hitung nilai Avail mentah
                 const availVal = cbDurMin - totalIklan;
+                
+                // Pengecekan: Jika avail <= 0 (0 atau minus), tampilkan "-", jika di atas 0 tampilkan angkanya (2 desimal)
                 const availDisplay = availVal <= 0 ? '-' : availVal.toFixed(2);
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="font-medium">${formatDate(date)}</td>
-                    <td>${formatSlotTime(slotTime)}</td>
+                    <td>${slotTime.substring(0, 5)}</td>
                     <td>${Math.round(slotDurMin)}</td>
                     <td class="bg-orange-50 font-semibold">${cbDurMin.toFixed(2)}</td>
                     <td class="bg-orange-50">${cbPct}</td>
@@ -308,8 +311,8 @@
                     <td>${cprp.toFixed(2)}</td>
                     <td class="font-bold">${cprpPct}</td>
                     <td class="font-semibold">${totalIklan.toFixed(2)}</td>
-                    <td class="bg-orange-50 font-bold ${availVal < 0 ? 'text-red-600' : 'text-gray-800'}">${availDisplay}</td>
-                ';
+                    <td class="bg-orange-50 font-bold text-gray-800">${availDisplay}</td>
+                `;
                 tbody.appendChild(tr);
             });
         }
