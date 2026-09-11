@@ -188,6 +188,18 @@
             renderTable();
         }
 
+        // Fungsi untuk merapikan Slot Time menjadi format HH:MM (misal: 7:30 -> 07:30)
+        function formatSlotTime(timeStr) {
+            if (!timeStr) return '';
+            const parts = timeStr.trim().split(':');
+            if (parts.length >= 2) {
+                const hh = parts[0].padStart(2, '0');
+                const mm = parts[1].padStart(2, '0');
+                return `${hh}:${mm}`;
+    }
+    return timeStr;
+}
+
         function timeToMinutes(timeStr) {
             if (!timeStr) return 0;
             const parts = timeStr.split(':').map(Number);
@@ -286,7 +298,7 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="font-medium">${formatDate(date)}</td>
-                    <td>${slotTime.substring(0, 5)}</td>
+                    <td>${formatSlotTime(slotTime)}</td>
                     <td>${Math.round(slotDurMin)}</td>
                     <td class="bg-orange-50 font-semibold">${cbDurMin.toFixed(2)}</td>
                     <td class="bg-orange-50">${cbPct}</td>
