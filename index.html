@@ -124,12 +124,10 @@
         document.getElementById('startDate').addEventListener('change', renderTable);
         document.getElementById('endDate').addEventListener('change', renderTable);
 
-        async function fetchLastModified(url) {
-            try {
-                const response = await fetch(url, { method: 'HEAD' });
-                const lastModifiedHeader = response.headers.get('Last-Modified');
-                if (lastModifiedHeader) {
-                    return new Date(lastModifiedHeader);
+        // Ambil waktu edit langsung dari baris pertama data Google Sheets
+        if (data1.length > 0 && data1[0].LAST_UPDATE) {
+            document.getElementById('asOfText').innerText = data1[0].LAST_UPDATE;
+
                 }
             } catch (e) {
                 console.warn('Gagal mengambil Last-Modified header:', e);
