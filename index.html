@@ -3,112 +3,174 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Rekap Occupancy</title>
+    <title>Rekap Occupancy Dashboard</title>
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PapaParse for CSV fetch & parsing -->
+
+    <!-- PapaParse untuk membaca CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
     <style>
-        /* Desain Compact: Padding rapat & teks kecil (11px-12px) */
+        /* Styling Compact Tabel */
         th, td { 
-            border: 1px solid #6b7280; 
+            border: 1px solid #4b5563; 
             text-align: center; 
-            padding: 2px 4px !important; 
-            font-size: 11px !important; 
+            padding: 2px 3px !important; 
+            font-size: 10.5px !important; 
             white-space: nowrap;
         }
-        .bg-yellow-header { background-color: #FFFF00; }
-        .bg-orange-header { background-color: #FCE4D6; }
+
+        /* Warna Tema Biru (Occupancy By Date) */
+        .bg-blue-header { background-color: #2563eb; color: white; }
+        .bg-blue-subhead { background-color: #3b82f6; color: white; }
+        .bg-blue-accent { background-color: #60a5fa; color: white; }
+        .bg-blue-light { background-color: #eff6ff; }
+
+        /* Warna Tema Kuning (Occupancy By Program) */
+        .bg-yellow-header { background-color: #eab308; color: black; }
+        .bg-yellow-subhead { background-color: #fef08a; color: black; }
+        .bg-orange-subhead { background-color: #fce4d6; color: black; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 font-sans text-xs">
+<body class="bg-gray-100 p-3 font-sans text-xs">
 
-    <!-- Container Dashboard Full-screen -->
-    <div class="w-full min-h-[calc(100vh-2rem)] bg-white p-5 rounded-lg shadow-md border flex flex-col justify-start">
+    <!-- Container Utama Full Screen -->
+    <div class="w-full bg-white p-4 rounded-lg shadow border flex flex-col gap-3">
         
-        <!-- Header Dashboard -->
-        <div class="flex justify-between items-center mb-3 border-b pb-2 gap-4">
-            <h1 class="text-base font-bold uppercase tracking-wide">REKAP OCCUPANCY DASHBOARD</h1>
-            <div id="loadingStatus" class="text-xs font-semibold text-blue-600 animate-pulse">
-                ⏳ Memuat data dari Google Sheets...
-            </div>
-        </div>
-        
-        <!-- Filter Bar (Program & Rentang Tanggal) -->
-        <div class="flex flex-wrap items-center gap-3 mb-4 bg-gray-50 p-3 rounded border">
-            <div class="flex items-center gap-1.5">
-                <label class="font-semibold text-xs">Program:</label>
-                <select id="programFilter" class="p-1.5 border rounded bg-white font-semibold min-w-[180px]" disabled>
-                    <option value="">-- Memuat... --</option>
-                </select>
+        <!-- Header Atas Dashboard -->
+        <div class="flex justify-between items-center border-b pb-2">
+            <div>
+                <h1 class="text-base font-extrabold text-gray-800 tracking-wider">REKAP OCCUPANCY DASHBOARD</h1>
+                <p class="text-xs font-semibold text-gray-600">PERIODE: <span id="mainPeriodeText">SEPTEMBER 2026</span></p>
             </div>
 
-            <!-- Filter Rentang Tanggal -->
-            <div class="flex items-center gap-1.5 border-l pl-3 border-gray-300">
-                <label class="font-semibold text-xs">Dari:</label>
-                <input type="date" id="startDate" class="p-1 border rounded bg-white text-xs">
-            </div>
-
-            <div class="flex items-center gap-1.5">
-                <label class="font-semibold text-xs">Sampai:</label>
-                <input type="date" id="endDate" class="p-1 border rounded bg-white text-xs">
-            </div>
-
-            <div class="flex gap-2 ml-auto">
-                <button onclick="resetFilters()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded text-xs font-medium">
-                    Reset Filter
-                </button>
-                <button onclick="loadGoogleSheetData()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-semibold">
+            <div class="flex items-center gap-3">
+                <button onclick="loadGoogleSheetData()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1 rounded text-xs flex items-center gap-1 shadow">
                     🔄 Refresh Data
                 </button>
-            </div>
-        </div>
-
-        <!-- Dashboard Header Info -->
-        <div id="reportHeader" class="mb-3 hidden">
-            <div class="flex justify-between items-end mb-2">
-                <div>
-                    <h2 class="font-bold text-sm">REKAP OCCUPANCY</h2>
-                    <p class="font-semibold text-gray-600">PERIODE: <span id="periodeText">-</span></p>
-                </div>
-                <p class="font-bold text-gray-800 bg-gray-100 px-2.5 py-1 rounded border">
+                <div class="bg-gray-100 border px-2.5 py-1 rounded text-xs font-bold text-gray-800">
                     AS OF: <span id="asOfText">-</span>
-                </p>
+                </div>
+                <div id="loadingStatus" class="text-xs font-semibold text-green-600 flex items-center gap-1">
+                    ✅ Data Ter-update
+                </div>
             </div>
+        </div>
+
+        <!-- LAYOUT 2 KOLOM (SIDE BY SIDE) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             
-            <div id="programTitle" class="p-1.5 font-bold text-center text-sm uppercase bg-yellow-300 border border-black tracking-wide">
-                PROGRAM NAME
+            <!-- ================= KANAN 1: OCCUPANCY BY DATE (TEMA BIRU) ================= -->
+            <div class="border rounded-md shadow-sm overflow-hidden bg-white">
+                <div class="bg-blue-header font-bold text-center py-2 text-sm uppercase tracking-wider">
+                    OCCUPANCY BY DATE
+                </div>
+
+                <div class="p-2.5 bg-gray-50 border-b flex flex-wrap items-center gap-2">
+                    <label class="font-semibold text-xs">Dari:</label>
+                    <input type="date" id="dateByDateFilter" class="p-1 border rounded bg-white text-xs">
+                    <button onclick="resetByDateFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2.5 py-1 rounded text-xs font-medium ml-auto">
+                        Reset Filter
+                    </button>
+                </div>
+
+                <!-- Banner Header Tanggal -->
+                <div id="byDateTitle" class="bg-blue-subhead text-white font-bold text-center py-1.5 text-xs uppercase tracking-wide">
+                    KAMIS, 27 AGUSTUS 2026
+                </div>
+
+                <!-- Tabel By Date -->
+                <div class="overflow-x-auto p-1">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-blue-subhead text-white font-bold">
+                                <th rowspan="2" class="px-2">Program</th>
+                                <th rowspan="2" class="px-1">Slot<br>Time</th>
+                                <th rowspan="2" class="px-1">Slot Dur</th>
+                                <th rowspan="2" class="bg-blue-accent px-1">TOTAL<br>CB DUR</th>
+                                <th colspan="5" class="px-1">DURASI IKLAN</th>
+                                <th rowspan="2" class="bg-blue-accent px-1">AVAIL CB</th>
+                            </tr>
+                            <tr class="bg-blue-subhead text-white font-bold">
+                                <th class="px-1">CPRP</th>
+                                <th class="px-0.5">%</th>
+                                <th class="px-1">NON CPRP</th>
+                                <th class="px-0.5">%</th>
+                                <th class="px-1">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBodyByDate"></tbody>
+                    </table>
+                </div>
             </div>
-        </div>
 
-        <!-- Compact Table Area -->
-        <div class="overflow-x-auto flex-1">
-            <table id="occupancyTable" class="w-auto border-collapse hidden mx-auto">
-                <thead>
-                    <tr class="bg-yellow-header font-bold">
-                        <th rowspan="2" class="px-2">Date</th>
-                        <th rowspan="2" class="px-1.5">Slot Time</th>
-                        <th rowspan="2" class="px-1.5">Slot Dur<br>(Menit)</th>
-                        <th colspan="2" class="bg-orange-header px-2">TOTAL CB DUR</th>
-                        <th colspan="5" class="px-2">DURASI IKLAN (Menit)</th>
-                        <th rowspan="2" class="bg-orange-header px-2">AVAIL</th>
-                    </tr>
-                    <tr class="bg-yellow-header font-bold">
-                        <th class="bg-orange-header px-1.5">Dur</th>
-                        <th class="bg-orange-header px-1.5">%</th>
-                        <th class="px-1.5">NON CPRP</th>
-                        <th class="px-1">％</th>
-                        <th class="px-1.5">CPRP</th>
-                        <th class="px-1">％</th>
-                        <th class="px-1.5">TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </div>
 
+            <!-- ================= KANAN 2: OCCUPANCY BY PROGRAM (TEMA KUNING) ================= -->
+            <div class="border rounded-md shadow-sm overflow-hidden bg-white">
+                <div class="bg-yellow-header font-bold text-center py-2 text-sm uppercase tracking-wider">
+                    OCCUPANCY BY PROGRAM
+                </div>
+
+                <div class="p-2.5 bg-gray-50 border-b flex flex-wrap items-center gap-2">
+                    <div class="flex items-center gap-1">
+                        <label class="font-semibold text-xs">Program:</label>
+                        <select id="programFilter" class="p-1 border rounded bg-white font-semibold max-w-[180px]" disabled>
+                            <option value="">-- Memuat... --</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1 border-l pl-2">
+                        <label class="font-semibold text-xs">Dari:</label>
+                        <input type="date" id="startDateByProg" class="p-1 border rounded bg-white text-xs">
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <label class="font-semibold text-xs">Sampai:</label>
+                        <input type="date" id="endDateByProg" class="p-1 border rounded bg-white text-xs">
+                    </div>
+
+                    <button onclick="resetByProgFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded text-xs font-medium ml-auto">
+                        Reset Filter
+                    </button>
+                </div>
+
+                <!-- Banner Header Program -->
+                <div id="byProgTitle" class="bg-yellow-subhead font-bold text-center py-1.5 text-xs uppercase tracking-wide border-b border-black">
+                    NAMA PROGRAM
+                </div>
+
+                <!-- Tabel By Program -->
+                <div class="overflow-x-auto p-1">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-yellow-header font-bold">
+                                <th rowspan="2" class="px-1">Date</th>
+                                <th rowspan="2" class="px-1">Slot Time</th>
+                                <th rowspan="2" class="px-1">Slot Dur<br>(Menit)</th>
+                                <th colspan="2" class="bg-orange-subhead px-1">TOTAL CB DUR</th>
+                                <th colspan="5" class="px-1">DURASI IKLAN (Menit)</th>
+                                <th rowspan="2" class="bg-orange-subhead px-1">AVAIL</th>
+                            </tr>
+                            <tr class="bg-yellow-header font-bold">
+                                <th class="bg-orange-subhead px-1">Dur</th>
+                                <th class="bg-orange-subhead px-0.5">%</th>
+                                <th class="px-1">NON CPRP</th>
+                                <th class="px-0.5">%</th>
+                                <th class="px-1">CPRP</th>
+                                <th class="px-0.5">%</th>
+                                <th class="px-1">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBodyByProg"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
     </div>
 
+    <!-- SCRIPT JAVASCRIPT LOGIKA -->
     <script>
         const URL_DATA_1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=0&single=true&output=csv';
         const URL_DATA_2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=271391032&single=true&output=csv';
@@ -120,15 +182,15 @@
             loadGoogleSheetData();
         });
 
-        document.getElementById('programFilter').addEventListener('change', renderTable);
-        document.getElementById('startDate').addEventListener('change', renderTable);
-        document.getElementById('endDate').addEventListener('change', renderTable);
+        // Event Listener Filter
+        document.getElementById('dateByDateFilter').addEventListener('change', renderByDateTable);
+        document.getElementById('programFilter').addEventListener('change', renderByProgTable);
+        document.getElementById('startDateByProg').addEventListener('change', renderByProgTable);
+        document.getElementById('endDateByProg').addEventListener('change', renderByProgTable);
 
         function loadGoogleSheetData() {
             const statusEl = document.getElementById('loadingStatus');
-            statusEl.innerText = '⏳ Memuat data...';
-            statusEl.classList.remove('hidden', 'text-green-600', 'text-red-600');
-            statusEl.classList.add('text-blue-600', 'animate-pulse');
+            statusEl.innerText = '⏳ Memuat...';
 
             Papa.parse(URL_DATA_1, {
                 download: true,
@@ -136,6 +198,8 @@
                 skipEmptyLines: true,
                 complete: function(res1) {
                     data1 = res1.data;
+                    updateAsOfFromData1();
+
                     Papa.parse(URL_DATA_2, {
                         download: true,
                         header: true,
@@ -143,62 +207,40 @@
                         complete: function(res2) {
                             data2 = res2.data;
                             statusEl.innerText = '✅ Data Ter-update';
-                            statusEl.classList.remove('animate-pulse', 'text-blue-600');
-                            statusEl.classList.add('text-green-600');
-                            
-                            // Ambil nilai tanggal/jam dari Header G1 di DATA 1
-                            updateAsOfFromData1();
                             initDashboard();
-                        },
-                        error: function() { showError('Gagal memuat DATA 2'); }
+                        }
                     });
-                },
-                error: function() { showError('Gagal memuat DATA 1'); }
+                }
             });
         }
 
         function updateAsOfFromData1() {
             if (data1.length > 0) {
-                const headers = Object.keys(data1[0]);
-                // Mencari nama header kolom G1 yang berisi string tanggal/jam
-                const asOfHeader = headers.find(h => h.includes('-') || h.includes(':') || h.toUpperCase().includes('UPDATE')) || headers[headers.length - 1];
-
-                if (asOfHeader) {
-                    document.getElementById('asOfText').innerText = asOfHeader.trim();
-                } else {
-                    document.getElementById('asOfText').innerText = '-';
+                const firstRow = data1[0];
+                const headers = Object.keys(firstRow);
+                const updateKey = headers.find(h => h.toUpperCase().includes('UPDATE') || h.toUpperCase().includes('DATE'));
+                if (updateKey && firstRow[updateKey]) {
+                    document.getElementById('asOfText').innerText = firstRow[updateKey].trim();
                 }
             }
         }
 
-        function showError(msg) {
-            const statusEl = document.getElementById('loadingStatus');
-            statusEl.innerText = '❌ ' + msg;
-            statusEl.classList.remove('animate-pulse', 'text-blue-600');
-            statusEl.classList.add('text-red-600');
-        }
-
         function initDashboard() {
+            // Inisialisasi Pilihan Program untuk Sisi Kanan
             const programs = [...new Set(data2.map(item => item.PROGRAM))].filter(Boolean).sort();
-            const filter = document.getElementById('programFilter');
-            
-            filter.innerHTML = programs.map(p => `<option value="${p}">${p}</option>`).join('');
-            filter.disabled = false;
+            const filterProg = document.getElementById('programFilter');
+            filterProg.innerHTML = programs.map(p => `<option value="${p}">${p}</option>`).join('');
+            filterProg.disabled = false;
 
-            renderTable();
+            // Set default tanggal filter By Date (ambil tanggal pertama dari DATA 2)
+            if (data2.length > 0 && data2[0].TGL) {
+                document.getElementById('dateByDateFilter').value = data2[0].TGL;
+            }
+
+            // Render Kedua Tabel
+            renderByDateTable();
+            renderByProgTable();
         }
-
-        // Fungsi untuk merapikan Slot Time menjadi format HH:MM (misal: 7:30 -> 07:30)
-        function formatSlotTime(timeStr) {
-            if (!timeStr) return '';
-            const parts = timeStr.trim().split(':');
-            if (parts.length >= 2) {
-                const hh = parts[0].padStart(2, '0');
-                const mm = parts[1].padStart(2, '0');
-                return `${hh}:${mm}`;
-    }
-    return timeStr;
-}
 
         function timeToMinutes(timeStr) {
             if (!timeStr) return 0;
@@ -213,59 +255,85 @@
             return `${d.getDate()}-${months[d.getMonth()]}`;
         }
 
-        function resetFilters() {
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
-            renderTable();
+        function formatFullDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
+            const months = ['AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER', 'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI'];
+            return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
         }
 
-        function renderTable() {
+        // ================= LOGIKA TABEL 1: OCCUPANCY BY DATE (KIRI) =================
+        function renderByDateTable() {
+            const selectedDate = document.getElementById('dateByDateFilter').value;
+            const tbody = document.getElementById('tableBodyByDate');
+            tbody.innerHTML = '';
+
+            if (!selectedDate) return;
+
+            document.getElementById('byDateTitle').innerText = formatFullDate(selectedDate);
+
+            // Filter DATA 2 berdasarkan 1 tanggal tayang
+            const daySchedules = data2.filter(d => d.TGL === selectedDate);
+
+            daySchedules.forEach(row => {
+                const progName = row.PROGRAM;
+                const slotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
+                const slotDur = row['SLOT DUR'] || row.SLOT_DUR || '';
+                const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0);
+
+                // Filter data iklan di DATA 1
+                const ads = data1.filter(d => d.PROGRAM === progName && d.TANGGAL === selectedDate);
+                let nonCprp = 0;
+                let cprp = 0;
+
+                ads.forEach(ad => {
+                    const dur = parseFloat(ad['MENIT IKLAN'] || ad.MENIT_IKLAN || 0);
+                    if (ad.TIPE === 'NON CPRP') nonCprp += dur;
+                    if (ad.TIPE === 'CPRP') cprp += dur;
+                });
+
+                const totalIklan = nonCprp + cprp;
+                const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '-';
+                const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '-';
+
+                const availVal = cbDurMin - totalIklan;
+                const availDisplay = availVal <= 0 ? '-' : availVal.toFixed(2);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-left font-semibold px-1.5">${progName}</td>
+                    <td>${slotTime.substring(0, 5)}</td>
+                    <td>${slotTime ? slotDur : ''}</td>
+                    <td class="bg-blue-light font-bold text-blue-900">${cbDurMin.toFixed(2)}</td>
+                    <td>${cprp.toFixed(2)}</td>
+                    <td>${cprpPct}</td>
+                    <td>${nonCprp.toFixed(2)}</td>
+                    <td>${nonCprpPct}</td>
+                    <td class="font-bold">${totalIklan.toFixed(2)}</td>
+                    <td class="bg-blue-light font-bold text-blue-900">${availDisplay}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ================= LOGIKA TABEL 2: OCCUPANCY BY PROGRAM (KANAN) =================
+        function renderByProgTable() {
             const selectedProg = document.getElementById('programFilter').value;
             if (!selectedProg) return;
 
-            const startDateVal = document.getElementById('startDate').value;
-            const endDateVal = document.getElementById('endDate').value;
+            const startDateVal = document.getElementById('startDateByProg').value;
+            const endDateVal = document.getElementById('endDateByProg').value;
 
-            document.getElementById('reportHeader').classList.remove('hidden');
-            document.getElementById('occupancyTable').classList.remove('hidden');
-            document.getElementById('programTitle').innerText = selectedProg;
+            document.getElementById('byProgTitle').innerText = selectedProg;
 
-            const tbody = document.getElementById('tableBody');
+            const tbody = document.getElementById('tableBodyByProg');
             tbody.innerHTML = '';
 
             let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
 
-            // Fungsi pembantu untuk mengubah objek Date / String menjadi format 'YYYY-MM-DD' lokal
-            function toLocalISOString(dateInput) {
-                if (!dateInput) return '';
-                const d = new Date(dateInput);
-                if (isNaN(d.getTime())) return ''; // Jika tanggal tidak valid
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            }
-
-            // Filter tanggal yang aman dari masalah timezone
-            if (startDateVal) {
-                progSchedules = progSchedules.filter(d => {
-                    const rowDateStr = toLocalISOString(d.TGL);
-                    return rowDateStr >= startDateVal;
-                });
-            }
-            if (endDateVal) {
-                progSchedules = progSchedules.filter(d => {
-                    const rowDateStr = toLocalISOString(d.TGL);
-                    return rowDateStr <= endDateVal;
-                });
-            }
-
-            if (progSchedules.length > 0) {
-                const dates = progSchedules.map(d => new Date(d.TGL));
-                const minD = new Date(Math.min(...dates));
-                const opt = { month: 'long', year: 'numeric' };
-                document.getElementById('periodeText').innerText = `${minD.toLocaleDateString('id-ID', opt).toUpperCase()}`;
-            }
+            if (startDateVal) progSchedules = progSchedules.filter(d => new Date(d.TGL) >= new Date(startDateVal));
+            if (endDateVal) progSchedules = progSchedules.filter(d => new Date(d.TGL) <= new Date(endDateVal));
 
             progSchedules.forEach(row => {
                 const date = row.TGL;
@@ -284,19 +352,13 @@
                 });
 
                 const totalIklan = nonCprp + cprp;
-                
-                // Ambil nilai dari kolom E (INVENTORY) di DATA 2
                 const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0); 
                 
                 const cbPct = slotDurMin > 0 ? ((cbDurMin / slotDurMin) * 100).toFixed(1) + '%' : '0%';
                 const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '0%';
                 const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '0%';
 
-                // Rumus AVAIL: TOTAL CB DUR (Dur) - TOTAL DURASI IKLAN (Total)
-                // Hitung nilai Avail mentah
                 const availVal = cbDurMin - totalIklan;
-                
-                // Pengecekan: Jika avail <= 0 (0 atau minus), tampilkan "-", jika di atas 0 tampilkan angkanya (2 desimal)
                 const availDisplay = availVal <= 0 ? '-' : availVal.toFixed(2);
 
                 const tr = document.createElement('tr');
@@ -315,6 +377,20 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // Reset Filter Helpers
+        function resetByDateFilter() {
+            if (data2.length > 0 && data2[0].TGL) {
+                document.getElementById('dateByDateFilter').value = data2[0].TGL;
+            }
+            renderByDateTable();
+        }
+
+        function resetByProgFilter() {
+            document.getElementById('startDateByProg').value = '';
+            document.getElementById('endDateByProg').value = '';
+            renderByProgTable();
         }
     </script>
 </body>
