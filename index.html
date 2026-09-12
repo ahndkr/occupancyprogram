@@ -64,7 +64,7 @@
                 </div>
 
                 <div class="p-2.5 bg-gray-50 border-b flex flex-wrap items-center gap-2">
-                    <label class="font-semibold text-xs">Dari:</label>
+                    <label class="font-semibold text-xs">Tgl:</label>
                     <input type="date" id="dateByDateFilter" class="p-1 border rounded bg-white text-xs">
                     <button onclick="resetByDateFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2.5 py-1 rounded text-xs font-medium ml-auto">
                         Reset Filter
@@ -81,7 +81,7 @@
                             <tr class="bg-blue-subhead text-white font-bold">
                                 <th rowspan="2" class="px-2">Program</th>
                                 <th rowspan="2" class="px-1">Slot<br>Time</th>
-                                <th rowspan="2" class="px-1">Slot Dur</th>
+                                <th rowspan="2" class="px-1">Slot Dur<br>(Menit)</th>
                                 <th rowspan="2" class="bg-blue-accent px-1">TOTAL<br>CB DUR</th>
                                 <th colspan="5" class="px-1">DURASI IKLAN</th>
                                 <th rowspan="2" class="bg-blue-accent px-1">AVAIL CB</th>
@@ -163,13 +163,14 @@
 
     <!-- LOGIKA JAVASCRIPT -->
     <script>
-        const URL_DATA_1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=0&single=true&output=csv';
-        const URL_DATA_2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=271391032&single=true&output=csv';
-        
+        const URL_DATA_1 = 'LINK_PUBLISH_CSV_DATA_1_ANDA_DI_SINI';
+        const URL_DATA_2 = 'LINK_PUBLISH_CSV_DATA_2_ANDA_DI_SINI';
+
         let data1 = [];
         let data2 = [];
 
         document.addEventListener('DOMContentLoaded', () => {
+            setTodayDateDefault();
             loadGoogleSheetData();
         });
 
@@ -177,6 +178,15 @@
         document.getElementById('programFilter').addEventListener('change', renderByProgTable);
         document.getElementById('startDateByProg').addEventListener('change', renderByProgTable);
         document.getElementById('endDateByProg').addEventListener('change', renderByProgTable);
+
+        // Menentukan default filter ke Tanggal Hari Ini (YYYY-MM-DD)
+        function setTodayDateDefault() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            document.getElementById('dateByDateFilter').value = `${year}-${month}-${day}`;
+        }
 
         function loadGoogleSheetData() {
             const statusEl = document.getElementById('loadingStatus');
@@ -197,37 +207,30 @@
                         complete: function(res2) {
                             data2 = res2.data;
                             statusEl.innerText = '✅ Data Ter-update';
-                            statusEl.classList.remove('animate-pulse', 'text-blue-600');
-                            statusEl.classList.add('text-green-600');
-                            
                             initDashboard();
-                        },
-                        error: function() { showError('Gagal memuat DATA 2'); }
+                        }
                     });
-                },
-                error: function() { showError('Gagal memuat DATA 1'); }
+                }
             });
         }
 
         function updateAsOfFromData1() {
             if (data1.length > 0) {
-                const headers = Object.keys(data1[0]);
-                // Mencari header kolom G1 di DATA 1 yang berisi string tanggal/jam
-                const asOfHeader = headers.find(h => h.includes('-') || h.includes(':') || h.toUpperCase().includes('UPDATE')) || headers[headers.length - 1];
+                const firstRow = data1[0];
+                const headers = Object.keys(firstRow);
+                
+                const updateKey = headers.find(h => 
+                    h.toUpperCase().includes('AS OF') || 
+                    h.toUpperCase().includes('UPDATE') || 
+                    h.toUpperCase().includes('DATE')
+                );
 
-                if (asOfHeader) {
-                    document.getElementById('asOfText').innerText = asOfHeader.trim();
-                } else {
-                    document.getElementById('asOfText').innerText = '-';
+                if (updateKey && firstRow[updateKey]) {
+                    document.getElementById('asOfText').innerText = firstRow[updateKey].trim();
+                } else if (headers.length > 0) {
+                    document.getElementById('asOfText').innerText = String(Object.values(firstRow)[0]).trim();
                 }
             }
-        }
-
-        function showError(msg) {
-            const statusEl = document.getElementById('loadingStatus');
-            statusEl.innerText = '❌ ' + msg;
-            statusEl.classList.remove('animate-pulse', 'text-blue-600');
-            statusEl.classList.add('text-red-600');
         }
 
         function initDashboard() {
@@ -235,10 +238,6 @@
             const filterProg = document.getElementById('programFilter');
             filterProg.innerHTML = programs.map(p => `<option value="${p}">${p}</option>`).join('');
             filterProg.disabled = false;
-
-            if (data2.length > 0 && data2[0].TGL) {
-                document.getElementById('dateByDateFilter').value = data2[0].TGL;
-            }
 
             renderByDateTable();
             renderByProgTable();
@@ -255,10 +254,15 @@
             return timeStr;
         }
 
+        // Konversi format durasi "HH:MM" atau "HH:MM:SS" dari Kolom C ke Total Menit
         function timeToMinutes(timeStr) {
             if (!timeStr) return 0;
             const parts = String(timeStr).split(':').map(Number);
-            return (parts[0] || 0) * 60 + (parts[1] || 0) + (parts[2] || 0) / 60;
+            if (parts.length >= 2) {
+                return (parts[0] || 0) * 60 + (parts[1] || 0) + ((parts[2] || 0) / 60);
+            }
+            const parsed = parseFloat(timeStr);
+            return isNaN(parsed) ? 0 : parsed;
         }
 
         function formatDate(dateStr) {
@@ -304,7 +308,11 @@
                 const progName = row.PROGRAM;
                 const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
                 const slotTimeDisplay = formatSlotTime(rawSlotTime);
-                const slotDur = row['SLOT DUR'] || row.SLOT_DUR || '';
+                
+                // Mengambil durasi dari kolom C (SLOT DUR) dan dikonversi ke menit
+                const rawSlotDur = row['SLOT DUR'] || row.SLOT_DUR || Object.values(row)[2] || '';
+                const slotDurMin = Math.round(timeToMinutes(rawSlotDur));
+
                 const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0);
 
                 const ads = data1.filter(d => {
@@ -332,7 +340,7 @@
                 tr.innerHTML = `
                     <td class="text-left font-semibold px-1.5">${progName}</td>
                     <td>${slotTimeDisplay}</td>
-                    <td>${slotTimeDisplay ? slotDur : ''}</td>
+                    <td>${slotDurMin}</td>
                     <td class="bg-blue-light font-bold text-blue-900">${cbDurMin.toFixed(2)}</td>
                     <td>${cprp.toFixed(2)}</td>
                     <td>${cprpPct}</td>
@@ -366,7 +374,10 @@
                 const date = row.TGL;
                 const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
                 const slotTimeDisplay = formatSlotTime(rawSlotTime);
-                const slotDurMin = timeToMinutes(rawSlotTime);
+                
+                // Mengambil durasi dari kolom C (SLOT DUR) dan dikonversi ke menit
+                const rawSlotDur = row['SLOT DUR'] || row.SLOT_DUR || Object.values(row)[2] || '';
+                const slotDurMin = Math.round(timeToMinutes(rawSlotDur));
 
                 const ads = data1.filter(d => d.PROGRAM === selectedProg && d.TANGGAL === date);
 
@@ -393,7 +404,7 @@
                 tr.innerHTML = `
                     <td class="font-medium">${formatDate(date)}</td>
                     <td>${slotTimeDisplay}</td>
-                    <td>${Math.round(slotDurMin)}</td>
+                    <td>${slotDurMin}</td>
                     <td class="bg-orange-50 font-semibold">${cbDurMin.toFixed(2)}</td>
                     <td class="bg-orange-50">${cbPct}</td>
                     <td>${nonCprp.toFixed(2)}</td>
@@ -408,9 +419,7 @@
         }
 
         function resetByDateFilter() {
-            if (data2.length > 0 && data2[0].TGL) {
-                document.getElementById('dateByDateFilter').value = data2[0].TGL;
-            }
+            setTodayDateDefault();
             renderByDateTable();
         }
 
@@ -419,6 +428,4 @@
             document.getElementById('endDateByProg').value = '';
             renderByProgTable();
         }
-    </script>
-</body>
-</html>
+    </
