@@ -197,30 +197,37 @@
                         complete: function(res2) {
                             data2 = res2.data;
                             statusEl.innerText = '✅ Data Ter-update';
+                            statusEl.classList.remove('animate-pulse', 'text-blue-600');
+                            statusEl.classList.add('text-green-600');
+                            
                             initDashboard();
-                        }
+                        },
+                        error: function() { showError('Gagal memuat DATA 2'); }
                     });
-                }
+                },
+                error: function() { showError('Gagal memuat DATA 1'); }
             });
         }
 
         function updateAsOfFromData1() {
             if (data1.length > 0) {
-                const firstRow = data1[0];
-                const headers = Object.keys(firstRow);
-                
-                const updateKey = headers.find(h => 
-                    h.toUpperCase().includes('AS OF') || 
-                    h.toUpperCase().includes('UPDATE') || 
-                    h.toUpperCase().includes('DATE')
-                );
+                const headers = Object.keys(data1[0]);
+                // Mencari header kolom G1 di DATA 1 yang berisi string tanggal/jam
+                const asOfHeader = headers.find(h => h.includes('-') || h.includes(':') || h.toUpperCase().includes('UPDATE')) || headers[headers.length - 1];
 
-                if (updateKey && firstRow[updateKey]) {
-                    document.getElementById('asOfText').innerText = firstRow[updateKey].trim();
-                } else if (headers.length > 0) {
-                    document.getElementById('asOfText').innerText = String(Object.values(firstRow)[0]).trim();
+                if (asOfHeader) {
+                    document.getElementById('asOfText').innerText = asOfHeader.trim();
+                } else {
+                    document.getElementById('asOfText').innerText = '-';
                 }
             }
+        }
+
+        function showError(msg) {
+            const statusEl = document.getElementById('loadingStatus');
+            statusEl.innerText = '❌ ' + msg;
+            statusEl.classList.remove('animate-pulse', 'text-blue-600');
+            statusEl.classList.add('text-red-600');
         }
 
         function initDashboard() {
