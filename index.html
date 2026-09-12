@@ -12,7 +12,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
     <style>
-        /* Styling Compact Tabel */
         th, td { 
             border: 1px solid #4b5563; 
             text-align: center; 
@@ -21,13 +20,11 @@
             white-space: nowrap;
         }
 
-        /* Warna Tema Biru (Occupancy By Date) */
         .bg-blue-header { background-color: #2563eb; color: white; }
         .bg-blue-subhead { background-color: #3b82f6; color: white; }
         .bg-blue-accent { background-color: #60a5fa; color: white; }
         .bg-blue-light { background-color: #eff6ff; }
 
-        /* Warna Tema Kuning (Occupancy By Program) */
         .bg-yellow-header { background-color: #eab308; color: black; }
         .bg-yellow-subhead { background-color: #fef08a; color: black; }
         .bg-orange-subhead { background-color: #fce4d6; color: black; }
@@ -35,10 +32,9 @@
 </head>
 <body class="bg-gray-100 p-3 font-sans text-xs">
 
-    <!-- Container Utama Full Screen -->
     <div class="w-full bg-white p-4 rounded-lg shadow border flex flex-col gap-3">
         
-        <!-- Header Atas Dashboard -->
+        <!-- Header Dashboard -->
         <div class="flex justify-between items-center border-b pb-2">
             <div>
                 <h1 class="text-base font-extrabold text-gray-800 tracking-wider">REKAP OCCUPANCY DASHBOARD</h1>
@@ -58,10 +54,10 @@
             </div>
         </div>
 
-        <!-- LAYOUT 2 KOLOM (SIDE BY SIDE) -->
+        <!-- Layout 2 Kolom -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             
-            <!-- ================= KANAN 1: OCCUPANCY BY DATE (TEMA BIRU) ================= -->
+            <!-- KIRI: OCCUPANCY BY DATE -->
             <div class="border rounded-md shadow-sm overflow-hidden bg-white">
                 <div class="bg-blue-header font-bold text-center py-2 text-sm uppercase tracking-wider">
                     OCCUPANCY BY DATE
@@ -75,12 +71,10 @@
                     </button>
                 </div>
 
-                <!-- Banner Header Tanggal -->
                 <div id="byDateTitle" class="bg-blue-subhead text-white font-bold text-center py-1.5 text-xs uppercase tracking-wide">
-                    KAMIS, 27 AGUSTUS 2026
+                    TANGGAL
                 </div>
 
-                <!-- Tabel By Date -->
                 <div class="overflow-x-auto p-1">
                     <table class="w-full border-collapse">
                         <thead>
@@ -105,8 +99,7 @@
                 </div>
             </div>
 
-
-            <!-- ================= KANAN 2: OCCUPANCY BY PROGRAM (TEMA KUNING) ================= -->
+            <!-- KANAN: OCCUPANCY BY PROGRAM -->
             <div class="border rounded-md shadow-sm overflow-hidden bg-white">
                 <div class="bg-yellow-header font-bold text-center py-2 text-sm uppercase tracking-wider">
                     OCCUPANCY BY PROGRAM
@@ -135,12 +128,10 @@
                     </button>
                 </div>
 
-                <!-- Banner Header Program -->
                 <div id="byProgTitle" class="bg-yellow-subhead font-bold text-center py-1.5 text-xs uppercase tracking-wide border-b border-black">
                     NAMA PROGRAM
                 </div>
 
-                <!-- Tabel By Program -->
                 <div class="overflow-x-auto p-1">
                     <table class="w-full border-collapse">
                         <thead>
@@ -170,7 +161,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT JAVASCRIPT LOGIKA -->
+    <!-- LOGIKA JAVASCRIPT -->
     <script>
         const URL_DATA_1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=0&single=true&output=csv';
         const URL_DATA_2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTa5_s79R3uepnlx0yGnT-KxeTAiJZNIJO4vhRWXu7HIzV5c8LmuFqnUn_phDmBzcmYhC7nQHDGzXRC/pub?gid=271391032&single=true&output=csv';
@@ -182,7 +173,6 @@
             loadGoogleSheetData();
         });
 
-        // Event Listener Filter
         document.getElementById('dateByDateFilter').addEventListener('change', renderByDateTable);
         document.getElementById('programFilter').addEventListener('change', renderByProgTable);
         document.getElementById('startDateByProg').addEventListener('change', renderByProgTable);
@@ -218,39 +208,56 @@
             if (data1.length > 0) {
                 const firstRow = data1[0];
                 const headers = Object.keys(firstRow);
-                const updateKey = headers.find(h => h.toUpperCase().includes('UPDATE') || h.toUpperCase().includes('DATE'));
+                
+                const updateKey = headers.find(h => 
+                    h.toUpperCase().includes('AS OF') || 
+                    h.toUpperCase().includes('UPDATE') || 
+                    h.toUpperCase().includes('DATE')
+                );
+
                 if (updateKey && firstRow[updateKey]) {
                     document.getElementById('asOfText').innerText = firstRow[updateKey].trim();
+                } else if (headers.length > 0) {
+                    document.getElementById('asOfText').innerText = String(Object.values(firstRow)[0]).trim();
                 }
             }
         }
 
         function initDashboard() {
-            // Inisialisasi Pilihan Program untuk Sisi Kanan
             const programs = [...new Set(data2.map(item => item.PROGRAM))].filter(Boolean).sort();
             const filterProg = document.getElementById('programFilter');
             filterProg.innerHTML = programs.map(p => `<option value="${p}">${p}</option>`).join('');
             filterProg.disabled = false;
 
-            // Set default tanggal filter By Date (ambil tanggal pertama dari DATA 2)
             if (data2.length > 0 && data2[0].TGL) {
                 document.getElementById('dateByDateFilter').value = data2[0].TGL;
             }
 
-            // Render Kedua Tabel
             renderByDateTable();
             renderByProgTable();
         }
 
+        function formatSlotTime(timeStr) {
+            if (!timeStr) return '';
+            const parts = String(timeStr).split(':').map(p => p.trim()).filter(Boolean);
+            if (parts.length >= 2) {
+                const hh = parts[0].padStart(2, '0');
+                const mm = parts[1].padStart(2, '0');
+                return `${hh}:${mm}`;
+            }
+            return timeStr;
+        }
+
         function timeToMinutes(timeStr) {
             if (!timeStr) return 0;
-            const parts = timeStr.split(':').map(Number);
+            const parts = String(timeStr).split(':').map(Number);
             return (parts[0] || 0) * 60 + (parts[1] || 0) + (parts[2] || 0) / 60;
         }
 
         function formatDate(dateStr) {
             if (!dateStr) return '';
             const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             return `${d.getDate()}-${months[d.getMonth()]}`;
         }
@@ -258,12 +265,12 @@
         function formatFullDate(dateStr) {
             if (!dateStr) return '';
             const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
             const days = ['MINGGU', 'SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT', 'SABTU'];
-            const months = ['AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER', 'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI'];
+            const months = ['JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
             return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
         }
 
-        // ================= LOGIKA TABEL 1: OCCUPANCY BY DATE (KIRI) =================
         function renderByDateTable() {
             const selectedDate = document.getElementById('dateByDateFilter').value;
             const tbody = document.getElementById('tableBodyByDate');
@@ -273,17 +280,31 @@
 
             document.getElementById('byDateTitle').innerText = formatFullDate(selectedDate);
 
-            // Filter DATA 2 berdasarkan 1 tanggal tayang
-            const daySchedules = data2.filter(d => d.TGL === selectedDate);
+            const targetDateObj = new Date(selectedDate).setHours(0,0,0,0);
+
+            const daySchedules = data2.filter(d => {
+                if (!d.TGL) return false;
+                const rowDateObj = new Date(d.TGL).setHours(0,0,0,0);
+                return rowDateObj === targetDateObj || d.TGL === selectedDate;
+            });
+
+            if (daySchedules.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="py-4 text-gray-500 font-semibold">Tidak ada data untuk tanggal ini</td></tr>`;
+                return;
+            }
 
             daySchedules.forEach(row => {
                 const progName = row.PROGRAM;
-                const slotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
+                const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
+                const slotTimeDisplay = formatSlotTime(rawSlotTime);
                 const slotDur = row['SLOT DUR'] || row.SLOT_DUR || '';
                 const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0);
 
-                // Filter data iklan di DATA 1
-                const ads = data1.filter(d => d.PROGRAM === progName && d.TANGGAL === selectedDate);
+                const ads = data1.filter(d => {
+                    const dDateObj = new Date(d.TANGGAL || d.TGL).setHours(0,0,0,0);
+                    return d.PROGRAM === progName && (dDateObj === targetDateObj || d.TANGGAL === selectedDate);
+                });
+
                 let nonCprp = 0;
                 let cprp = 0;
 
@@ -303,8 +324,8 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="text-left font-semibold px-1.5">${progName}</td>
-                    <td>${slotTime.substring(0, 5)}</td>
-                    <td>${slotTime ? slotDur : ''}</td>
+                    <td>${slotTimeDisplay}</td>
+                    <td>${slotTimeDisplay ? slotDur : ''}</td>
                     <td class="bg-blue-light font-bold text-blue-900">${cbDurMin.toFixed(2)}</td>
                     <td>${cprp.toFixed(2)}</td>
                     <td>${cprpPct}</td>
@@ -317,7 +338,6 @@
             });
         }
 
-        // ================= LOGIKA TABEL 2: OCCUPANCY BY PROGRAM (KANAN) =================
         function renderByProgTable() {
             const selectedProg = document.getElementById('programFilter').value;
             if (!selectedProg) return;
@@ -337,8 +357,9 @@
 
             progSchedules.forEach(row => {
                 const date = row.TGL;
-                const slotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
-                const slotDurMin = timeToMinutes(row['SLOT DUR'] || row.SLOT_DUR);
+                const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
+                const slotTimeDisplay = formatSlotTime(rawSlotTime);
+                const slotDurMin = timeToMinutes(rawSlotTime);
 
                 const ads = data1.filter(d => d.PROGRAM === selectedProg && d.TANGGAL === date);
 
@@ -364,7 +385,7 @@
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td class="font-medium">${formatDate(date)}</td>
-                    <td>${slotTime.substring(0, 5)}</td>
+                    <td>${slotTimeDisplay}</td>
                     <td>${Math.round(slotDurMin)}</td>
                     <td class="bg-orange-50 font-semibold">${cbDurMin.toFixed(2)}</td>
                     <td class="bg-orange-50">${cbPct}</td>
@@ -379,7 +400,6 @@
             });
         }
 
-        // Reset Filter Helpers
         function resetByDateFilter() {
             if (data2.length > 0 && data2[0].TGL) {
                 document.getElementById('dateByDateFilter').value = data2[0].TGL;
