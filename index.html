@@ -200,7 +200,6 @@
         document.getElementById('startDateByProg').addEventListener('change', renderByProgTable);
         document.getElementById('endDateByProg').addEventListener('change', renderByProgTable);
 
-        // Menentukan default filter ke Tanggal Hari Ini (YYYY-MM-DD)
         function setTodayDateDefault() {
             const today = new Date();
             const year = today.getFullYear();
@@ -238,7 +237,6 @@
         function updateAsOfFromData1() {
             if (data1.length > 0) {
                 const headers = Object.keys(data1[0]);
-                // Mencari header kolom G1 di DATA 1 yang berisi string tanggal/jam
                 const asOfHeader = headers.find(h => h.includes('-') || h.includes(':') || h.toUpperCase().includes('UPDATE')) || headers[headers.length - 1];
 
                 if (asOfHeader) {
@@ -270,7 +268,6 @@
             return timeStr;
         }
 
-        // Konversi format durasi "HH:MM" atau "HH:MM:SS" dari Kolom C ke Total Menit
         function timeToMinutes(timeStr) {
             if (!timeStr) return 0;
             const parts = String(timeStr).split(':').map(Number);
@@ -325,7 +322,6 @@
                 const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
                 const slotTimeDisplay = formatSlotTime(rawSlotTime);
                 
-                // Mengambil durasi dari kolom C (SLOT DUR) dan dikonversi ke menit
                 const rawSlotDur = row['SLOT DUR'] || row.SLOT_DUR || Object.values(row)[2] || '';
                 const slotDurMin = Math.round(timeToMinutes(rawSlotDur));
 
@@ -383,7 +379,6 @@
 
             let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
 
-            // Normalisasi Filter Tanggal tanpa mempertimbangkan jam (Hours 00:00:00)
             const startTimestamp = startDateVal ? new Date(startDateVal).setHours(0,0,0,0) : null;
             const endTimestamp = endDateVal ? new Date(endDateVal).setHours(0,0,0,0) : null;
 
@@ -486,20 +481,53 @@
             XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
         }
 
-        // FUNGSI EKSPORT KE GAMBAR (PNG)
+        // FUNGSI EKSPORT KE GAMBAR (PNG) - BERLAKU UTUH UNTUK KEDUA TABEL
         function downloadImage(elementId, filename) {
-            const element = document.getElementById(elementId);
-            if (!element) return;
+            const cardElement = document.getElementById(elementId);
+            if (!cardElement) return;
 
-            html2canvas(element, {
+            const tableTitle = cardElement.querySelector('#byDateTitle') || cardElement.querySelector('#byProgTitle');
+            const tableElement = cardElement.querySelector('table');
+            
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.top = '-9999px';
+            container.style.backgroundColor = '#ffffff';
+            container.style.padding = '10px';
+            container.style.width = 'max-content';
+
+            if (tableTitle) {
+                const titleClone = tableTitle.cloneNode(true);
+                container.appendChild(titleClone);
+            }
+            
+            if (tableElement) {
+                const tableClone = tableElement.cloneNode(true);
+                tableClone.style.width = 'auto';
+                tableClone.style.tableLayout = 'auto';
+                container.appendChild(tableClone);
+            }
+
+            document.body.appendChild(container);
+
+            html2canvas(container, {
                 scale: 2,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                useCORS: true
             }).then(canvas => {
                 const link = document.createElement('a');
                 const dateStr = new Date().toISOString().slice(0, 10);
                 link.download = `${filename}_${dateStr}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
+                
+                document.body.removeChild(container);
+            }).catch(err => {
+                console.error(err);
+                if (document.body.contains(container)) {
+                    document.body.removeChild(container);
+                }
             });
         }
     </script>
