@@ -11,6 +11,10 @@
     <!-- PapaParse untuk membaca CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
+    <!-- Library untuk Export Excel dan Gambar -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <style>
         th, td { 
             border: 1px solid #4b5563; 
@@ -58,7 +62,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             
             <!-- KIRI: OCCUPANCY BY DATE -->
-            <div class="border rounded-md shadow-sm overflow-hidden bg-white">
+            <div id="cardByDate" class="border rounded-md shadow-sm overflow-hidden bg-white">
                 <div class="bg-blue-header font-bold text-center py-2 text-sm uppercase tracking-wider">
                     OCCUPANCY BY DATE
                 </div>
@@ -66,9 +70,18 @@
                 <div class="p-2.5 bg-gray-50 border-b flex flex-wrap items-center gap-2">
                     <label class="font-semibold text-xs">Tgl:</label>
                     <input type="date" id="dateByDateFilter" class="p-1 border rounded bg-white text-xs">
-                    <button onclick="resetByDateFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2.5 py-1 rounded text-xs font-medium ml-auto">
-                        Reset Filter
-                    </button>
+                    
+                    <div class="flex items-center gap-1 ml-auto">
+                        <button onclick="downloadExcel('tableBodyByDate', 'Occupancy_By_Date')" class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
+                            📊 Excel
+                        </button>
+                        <button onclick="downloadImage('cardByDate', 'Occupancy_By_Date')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
+                            📷 Gambar
+                        </button>
+                        <button onclick="resetByDateFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2.5 py-1 rounded text-xs font-medium">
+                            Reset Filter
+                        </button>
+                    </div>
                 </div>
 
                 <div id="byDateTitle" class="bg-blue-subhead text-white font-bold text-center py-1.5 text-xs uppercase tracking-wide">
@@ -100,7 +113,7 @@
             </div>
 
             <!-- KANAN: OCCUPANCY BY PROGRAM -->
-            <div class="border rounded-md shadow-sm overflow-hidden bg-white">
+            <div id="cardByProg" class="border rounded-md shadow-sm overflow-hidden bg-white">
                 <div class="bg-yellow-header font-bold text-center py-2 text-sm uppercase tracking-wider">
                     OCCUPANCY BY PROGRAM
                 </div>
@@ -123,9 +136,17 @@
                         <input type="date" id="endDateByProg" class="p-1 border rounded bg-white text-xs">
                     </div>
 
-                    <button onclick="resetByProgFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded text-xs font-medium ml-auto">
-                        Reset Filter
-                    </button>
+                    <div class="flex items-center gap-1 ml-auto">
+                        <button onclick="downloadExcel('tableBodyByProg', 'Occupancy_By_Program')" class="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
+                            📊 Excel
+                        </button>
+                        <button onclick="downloadImage('cardByProg', 'Occupancy_By_Program')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
+                            📷 Gambar
+                        </button>
+                        <button onclick="resetByProgFilter()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded text-xs font-medium">
+                            Reset Filter
+                        </button>
+                    </div>
                 </div>
 
                 <div id="byProgTitle" class="bg-yellow-subhead font-bold text-center py-1.5 text-xs uppercase tracking-wide border-b border-black">
@@ -349,95 +370,95 @@
         }
 
         function renderByProgTable() {
-    const selectedProg = document.getElementById('programFilter').value;
-    if (!selectedProg) return;
+            const selectedProg = document.getElementById('programFilter').value;
+            if (!selectedProg) return;
 
-    const startDateVal = document.getElementById('startDateByProg').value;
-    const endDateVal = document.getElementById('endDateByProg').value;
+            const startDateVal = document.getElementById('startDateByProg').value;
+            const endDateVal = document.getElementById('endDateByProg').value;
 
-    document.getElementById('byProgTitle').innerText = selectedProg;
+            document.getElementById('byProgTitle').innerText = selectedProg;
 
-    const tbody = document.getElementById('tableBodyByProg');
-    tbody.innerHTML = '';
+            const tbody = document.getElementById('tableBodyByProg');
+            tbody.innerHTML = '';
 
-    let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
+            let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
 
-    // Normalisasi Filter Tanggal tanpa mempertimbangkan jam (Hours 00:00:00)
-    const startTimestamp = startDateVal ? new Date(startDateVal).setHours(0,0,0,0) : null;
-    const endTimestamp = endDateVal ? new Date(endDateVal).setHours(0,0,0,0) : null;
+            // Normalisasi Filter Tanggal tanpa mempertimbangkan jam (Hours 00:00:00)
+            const startTimestamp = startDateVal ? new Date(startDateVal).setHours(0,0,0,0) : null;
+            const endTimestamp = endDateVal ? new Date(endDateVal).setHours(0,0,0,0) : null;
 
-    if (startTimestamp) {
-        progSchedules = progSchedules.filter(d => {
-            if (!d.TGL) return false;
-            const rowTimestamp = new Date(d.TGL).setHours(0,0,0,0);
-            return rowTimestamp >= startTimestamp;
-        });
-    }
+            if (startTimestamp) {
+                progSchedules = progSchedules.filter(d => {
+                    if (!d.TGL) return false;
+                    const rowTimestamp = new Date(d.TGL).setHours(0,0,0,0);
+                    return rowTimestamp >= startTimestamp;
+                });
+            }
 
-    if (endTimestamp) {
-        progSchedules = progSchedules.filter(d => {
-            if (!d.TGL) return false;
-            const rowTimestamp = new Date(d.TGL).setHours(0,0,0,0);
-            return rowTimestamp <= endTimestamp;
-        });
-    }
+            if (endTimestamp) {
+                progSchedules = progSchedules.filter(d => {
+                    if (!d.TGL) return false;
+                    const rowTimestamp = new Date(d.TGL).setHours(0,0,0,0);
+                    return rowTimestamp <= endTimestamp;
+                });
+            }
 
-    if (progSchedules.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" class="py-4 text-gray-500 font-semibold">Tidak ada data untuk rentang tanggal ini</td></tr>`;
-        return;
-    }
+            if (progSchedules.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" class="py-4 text-gray-500 font-semibold">Tidak ada data untuk rentang tanggal ini</td></tr>`;
+                return;
+            }
 
-    progSchedules.forEach(row => {
-        const date = row.TGL;
-        const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
-        const slotTimeDisplay = formatSlotTime(rawSlotTime);
-        
-        const rawSlotDur = row['SLOT DUR'] || row.SLOT_DUR || Object.values(row)[2] || '';
-        const slotDurMin = Math.round(timeToMinutes(rawSlotDur));
+            progSchedules.forEach(row => {
+                const date = row.TGL;
+                const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
+                const slotTimeDisplay = formatSlotTime(rawSlotTime);
+                
+                const rawSlotDur = row['SLOT DUR'] || row.SLOT_DUR || Object.values(row)[2] || '';
+                const slotDurMin = Math.round(timeToMinutes(rawSlotDur));
 
-        const ads = data1.filter(d => {
-            if (d.PROGRAM !== selectedProg) return false;
-            const rowDateObj = new Date(date).setHours(0,0,0,0);
-            const adDateObj = new Date(d.TANGGAL || d.TGL).setHours(0,0,0,0);
-            return rowDateObj === adDateObj || d.TANGGAL === date;
-        });
+                const ads = data1.filter(d => {
+                    if (d.PROGRAM !== selectedProg) return false;
+                    const rowDateObj = new Date(date).setHours(0,0,0,0);
+                    const adDateObj = new Date(d.TANGGAL || d.TGL).setHours(0,0,0,0);
+                    return rowDateObj === adDateObj || d.TANGGAL === date;
+                });
 
-        let nonCprp = 0;
-        let cprp = 0;
+                let nonCprp = 0;
+                let cprp = 0;
 
-        ads.forEach(ad => {
-            const dur = parseFloat(ad['MENIT IKLAN'] || ad.MENIT_IKLAN || 0);
-            if (ad.TIPE === 'NON CPRP') nonCprp += dur;
-            if (ad.TIPE === 'CPRP') cprp += dur;
-        });
+                ads.forEach(ad => {
+                    const dur = parseFloat(ad['MENIT IKLAN'] || ad.MENIT_IKLAN || 0);
+                    if (ad.TIPE === 'NON CPRP') nonCprp += dur;
+                    if (ad.TIPE === 'CPRP') cprp += dur;
+                });
 
-        const totalIklan = nonCprp + cprp;
-        const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0); 
-        
-        const cbPct = slotDurMin > 0 ? ((cbDurMin / slotDurMin) * 100).toFixed(1) + '%' : '0%';
-        const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '0%';
-        const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '0%';
+                const totalIklan = nonCprp + cprp;
+                const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0); 
+                
+                const cbPct = slotDurMin > 0 ? ((cbDurMin / slotDurMin) * 100).toFixed(1) + '%' : '0%';
+                const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '0%';
+                const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '0%';
 
-        const availVal = cbDurMin - totalIklan;
-        const availDisplay = availVal <= 0 ? '-' : availVal.toFixed(2);
+                const availVal = cbDurMin - totalIklan;
+                const availDisplay = availVal <= 0 ? '-' : availVal.toFixed(2);
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td class="font-medium">${formatDate(date)}</td>
-            <td>${slotTimeDisplay}</td>
-            <td>${slotDurMin}</td>
-            <td class="bg-orange-50 font-semibold">${cbDurMin.toFixed(2)}</td>
-            <td class="bg-orange-50">${cbPct}</td>
-            <td>${nonCprp.toFixed(2)}</td>
-            <td class="font-bold">${nonCprpPct}</td>
-            <td>${cprp.toFixed(2)}</td>
-            <td class="font-bold">${cprpPct}</td>
-            <td class="font-semibold">${totalIklan.toFixed(2)}</td>
-            <td class="bg-orange-50 font-bold text-gray-800">${availDisplay}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="font-medium">${formatDate(date)}</td>
+                    <td>${slotTimeDisplay}</td>
+                    <td>${slotDurMin}</td>
+                    <td class="bg-orange-50 font-semibold">${cbDurMin.toFixed(2)}</td>
+                    <td class="bg-orange-50">${cbPct}</td>
+                    <td>${nonCprp.toFixed(2)}</td>
+                    <td class="font-bold">${nonCprpPct}</td>
+                    <td>${cprp.toFixed(2)}</td>
+                    <td class="font-bold">${cprpPct}</td>
+                    <td class="font-semibold">${totalIklan.toFixed(2)}</td>
+                    <td class="bg-orange-50 font-bold text-gray-800">${availDisplay}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
 
         function resetByDateFilter() {
             setTodayDateDefault();
@@ -449,6 +470,38 @@
             document.getElementById('endDateByProg').value = '';
             renderByProgTable();
         }
+
+        // FUNGSI EKSPORT KE EXCEL
+        function downloadExcel(tableBodyId, filename) {
+            const tbody = document.getElementById(tableBodyId);
+            const table = tbody.closest('table');
+            
+            if (!tbody || tbody.rows.length === 0 || tbody.innerText.includes('Tidak ada data')) {
+                alert('Tidak ada data tabel untuk di-download!');
+                return;
+            }
+
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+            const dateStr = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
+        }
+
+        // FUNGSI EKSPORT KE GAMBAR (PNG)
+        function downloadImage(elementId, filename) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+
+            html2canvas(element, {
+                scale: 2,
+                backgroundColor: '#ffffff'
+            }).then(canvas => {
+                const link = document.createElement('a');
+                const dateStr = new Date().toISOString().slice(0, 10);
+                link.download = `${filename}_${dateStr}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
     </script>
 </body>
- </html>
+</html>
