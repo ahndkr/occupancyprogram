@@ -215,30 +215,18 @@
         }
 
         function updateAsOfFromData1() {
-            if (!data1 || data1.length === 0) return;
+            if (data1.length > 0) {
+                const headers = Object.keys(data1[0]);
+                // Mencari header kolom G1 di DATA 1 yang berisi string tanggal/jam
+                const asOfHeader = headers.find(h => h.includes('-') || h.includes(':') || h.toUpperCase().includes('UPDATE')) || headers[headers.length - 1];
 
-    // 1. Ambil dari nama Header kolom ke-7 (Index 6 / Cell G1 jika G1 dijadikan header)
-            const headers = Object.keys(data1[0]);
-            if (headers.length >= 7 && headers[6] && !headers[6].startsWith('__parsed_extra')) {
-            const headerValue = headers[6].trim();
-            if (headerValue !== '' && headerValue !== 'undefined') {
-            document.getElementById('asOfText').innerText = headerValue;
-            return;
+                if (asOfHeader) {
+                    document.getElementById('asOfText').innerText = asOfHeader.trim();
+                } else {
+                    document.getElementById('asOfText').innerText = '-';
+                }
+            }
         }
-    }
-
-    // 2. Ambil dari isi baris ke-1 kolom ke-7 (jika baris 1 Sheets adalah data)
-            const firstRowValues = Object.values(data1[0]);
-            if (firstRowValues.length >= 7 && firstRowValues[6]) {
-            const cellValue = String(firstRowValues[6]).trim();
-            if (cellValue !== '') {
-            document.getElementById('asOfText').innerText = cellValue;
-            return;
-        }
-    }
-
-    document.getElementById('asOfText').innerText = '-';
-}
 
         function initDashboard() {
             const programs = [...new Set(data2.map(item => item.PROGRAM))].filter(Boolean).sort();
