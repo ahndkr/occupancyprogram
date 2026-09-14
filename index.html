@@ -481,55 +481,77 @@
             XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
         }
 
-        // FUNGSI EKSPORT KE GAMBAR (PNG) - BERLAKU UTUH UNTUK KEDUA TABEL
-        function downloadImage(elementId, filename) {
-            const cardElement = document.getElementById(elementId);
-            if (!cardElement) return;
+        // FUNGSI EKSPORT KE GAMBAR (PNG) - DIPERBAIKI AGAR PROPORSIONAL
+function downloadImage(elementId, filename) {
+    const cardElement = document.getElementById(elementId);
+    if (!cardElement) return;
 
-            const tableTitle = cardElement.querySelector('#byDateTitle') || cardElement.querySelector('#byProgTitle');
-            const tableElement = cardElement.querySelector('table');
-            
-            const container = document.createElement('div');
-            container.style.position = 'absolute';
-            container.style.left = '-9999px';
-            container.style.top = '-9999px';
-            container.style.backgroundColor = '#ffffff';
-            container.style.padding = '10px';
-            container.style.width = 'max-content';
+    const tableTitle = cardElement.querySelector('#byDateTitle') || cardElement.querySelector('#byProgTitle');
+    const tableElement = cardElement.querySelector('table');
+    
+    if (!tableElement) return;
 
-            if (tableTitle) {
-                const titleClone = tableTitle.cloneNode(true);
-                container.appendChild(titleClone);
-            }
-            
-            if (tableElement) {
-                const tableClone = tableElement.cloneNode(true);
-                tableClone.style.width = 'auto';
-                tableClone.style.tableLayout = 'auto';
-                container.appendChild(tableClone);
-            }
+    // Buat container sementara di luar layar
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '-9999px';
+    container.style.backgroundColor = '#ffffff';
+    container.style.padding = '10px';
+    container.style.width = 'max-content';
 
-            document.body.appendChild(container);
+    // Clone tabel agar tidak mengganggu tampilan asli
+    const tableClone = tableElement.cloneNode(true);
+    tableClone.style.width = '100%';
+    tableClone.style.tableLayout = 'auto';
 
-            html2canvas(container, {
-                scale: 2,
-                backgroundColor: '#ffffff',
-                useCORS: true
-            }).then(canvas => {
-                const link = document.createElement('a');
-                const dateStr = new Date().toISOString().slice(0, 10);
-                link.download = `${filename}_${dateStr}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                
-                document.body.removeChild(container);
-            }).catch(err => {
-                console.error(err);
-                if (document.body.contains(container)) {
-                    document.body.removeChild(container);
-                }
-            });
+    // Jika ada header judul (tanggal/program), sisipkan sebagai baris paling atas tabel clone
+    if (tableTitle) {
+        const titleText = tableTitle.innerText;
+        // Hitung total kolom tabel untuk colspan
+        const colCount = tableClone.rows[0] ? tableClone.rows[0].cells.length : 10;
+        
+        // Ambil class / warna background dari judul asli
+        const titleClass = tableTitle.className;
+
+        const titleRow = document.createElement('tr');
+        titleRow.innerHTML = `
+            <th colspan="15" class="${titleClass}" style="padding: 8px !important; font-size: 13px !important; text-align: center;">
+                ${titleText}
+            </th>
+        `;
+
+        // Masukkan di paling atas thead
+        const thead = tableClone.querySelector('thead');
+        if (thead) {
+            thead.insertBefore(titleRow, thead.firstChild);
         }
+    }
+
+    container.appendChild(tableClone);
+    document.body.appendChild(container);
+
+    // Capture menggunakan html2canvas
+    html2canvas(container, {
+        scale: 2, // Hasil gambar tajam & bersih
+        backgroundColor: '#ffffff',
+        useCORS: true
+    }).then(canvas => {
+        const link = document.createElement('a');
+        const dateStr = new Date().toISOString().slice(0, 10);
+        link.download = `${filename}_${dateStr}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        
+        document.body.removeChild(container);
+    }).catch(err => {
+        console.error(err);
+        if (document.body.contains(container)) {
+            document.body.removeChild(container);
+        }
+    });
+}
+
     </script>
 </body>
 </html>
