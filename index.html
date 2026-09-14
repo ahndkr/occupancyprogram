@@ -354,69 +354,95 @@
         }
 
         function renderByProgTable() {
-            const selectedProg = document.getElementById('programFilter').value;
-            if (!selectedProg) return;
+    const selectedProg = document.getElementById('programFilter').value;
+    if (!selectedProg) return;
 
-            const startDateVal = document.getElementById('startDateByProg').value;
-            const endDateVal = document.getElementById('endDateByProg').value;
+    const startDateVal = document.getElementById('startDateByProg').value;
+    const endDateVal = document.getElementById('endDateByProg').value;
 
-            document.getElementById('byProgTitle').innerText = selectedProg;
+    document.getElementById('byProgTitle').innerText = selectedProg;
 
-            const tbody = document.getElementById('tableBodyByProg');
-            tbody.innerHTML = '';
+    const tbody = document.getElementById('tableBodyByProg');
+    tbody.innerHTML = '';
 
-            let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
+    let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
 
-            if (startDateVal) progSchedules = progSchedules.filter(d => new Date(d.TGL) >= new Date(startDateVal));
-            if (endDateVal) progSchedules = progSchedules.filter(d => new Date(d.TGL) <= new Date(endDateVal));
+    // Normalisasi Filter Tanggal tanpa mempertimbangkan jam (Hours 00:00:00)
+    const startTimestamp = startDateVal ? new Date(startDateVal).setHours(0,0,0,0) : null;
+    const endTimestamp = endDateVal ? new Date(endDateVal).setHours(0,0,0,0) : null;
 
-            progSchedules.forEach(row => {
-                const date = row.TGL;
-                const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
-                const slotTimeDisplay = formatSlotTime(rawSlotTime);
-                
-                // Mengambil durasi dari kolom C (SLOT DUR) dan dikonversi ke menit
-                const rawSlotDur = row['SLOT DUR'] || row.SLOT_DUR || Object.values(row)[2] || '';
-                const slotDurMin = Math.round(timeToMinutes(rawSlotDur));
+    if (startTimestamp) {
+        progSchedules = progSchedules.filter(d => {
+            if (!d.TGL) return false;
+            const rowTimestamp = new Date(d.TGL).setHours(0,0,0,0);
+            return rowTimestamp >= startTimestamp;
+        });
+    }
 
-                const ads = data1.filter(d => d.PROGRAM === selectedProg && d.TANGGAL === date);
+    if (endTimestamp) {
+        progSchedules = progSchedules.filter(d => {
+            if (!d.TGL) return false;
+            const rowTimestamp = new Date(d.TGL).setHours(0,0,0,0);
+            return rowTimestamp <= endTimestamp;
+        });
+    }
 
-                let nonCprp = 0;
-                let cprp = 0;
+    if (progSchedules.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="py-4 text-gray-500 font-semibold">Tidak ada data untuk rentang tanggal ini</td></tr>`;
+        return;
+    }
 
-                ads.forEach(ad => {
-                    const dur = parseFloat(ad['MENIT IKLAN'] || ad.MENIT_IKLAN || 0);
-                    if (ad.TIPE === 'NON CPRP') nonCprp += dur;
-                    if (ad.TIPE === 'CPRP') cprp += dur;
-                });
+    progSchedules.forEach(row => {
+        const date = row.TGL;
+        const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
+        const slotTimeDisplay = formatSlotTime(rawSlotTime);
+        
+        const rawSlotDur = row['SLOT DUR'] || row.SLOT_DUR || Object.values(row)[2] || '';
+        const slotDurMin = Math.round(timeToMinutes(rawSlotDur));
 
-                const totalIklan = nonCprp + cprp;
-                const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0); 
-                
-                const cbPct = slotDurMin > 0 ? ((cbDurMin / slotDurMin) * 100).toFixed(1) + '%' : '0%';
-                const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '0%';
-                const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '0%';
+        const ads = data1.filter(d => {
+            if (d.PROGRAM !== selectedProg) return false;
+            const rowDateObj = new Date(date).setHours(0,0,0,0);
+            const adDateObj = new Date(d.TANGGAL || d.TGL).setHours(0,0,0,0);
+            return rowDateObj === adDateObj || d.TANGGAL === date;
+        });
 
-                const availVal = cbDurMin - totalIklan;
-                const availDisplay = availVal <= 0 ? '-' : availVal.toFixed(2);
+        let nonCprp = 0;
+        let cprp = 0;
 
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="font-medium">${formatDate(date)}</td>
-                    <td>${slotTimeDisplay}</td>
-                    <td>${slotDurMin}</td>
-                    <td class="bg-orange-50 font-semibold">${cbDurMin.toFixed(2)}</td>
-                    <td class="bg-orange-50">${cbPct}</td>
-                    <td>${nonCprp.toFixed(2)}</td>
-                    <td class="font-bold">${nonCprpPct}</td>
-                    <td>${cprp.toFixed(2)}</td>
-                    <td class="font-bold">${cprpPct}</td>
-                    <td class="font-semibold">${totalIklan.toFixed(2)}</td>
-                    <td class="bg-orange-50 font-bold text-gray-800">${availDisplay}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
+        ads.forEach(ad => {
+            const dur = parseFloat(ad['MENIT IKLAN'] || ad.MENIT_IKLAN || 0);
+            if (ad.TIPE === 'NON CPRP') nonCprp += dur;
+            if (ad.TIPE === 'CPRP') cprp += dur;
+        });
+
+        const totalIklan = nonCprp + cprp;
+        const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0); 
+        
+        const cbPct = slotDurMin > 0 ? ((cbDurMin / slotDurMin) * 100).toFixed(1) + '%' : '0%';
+        const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '0%';
+        const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '0%';
+
+        const availVal = cbDurMin - totalIklan;
+        const availDisplay = availVal <= 0 ? '-' : availVal.toFixed(2);
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="font-medium">${formatDate(date)}</td>
+            <td>${slotTimeDisplay}</td>
+            <td>${slotDurMin}</td>
+            <td class="bg-orange-50 font-semibold">${cbDurMin.toFixed(2)}</td>
+            <td class="bg-orange-50">${cbPct}</td>
+            <td>${nonCprp.toFixed(2)}</td>
+            <td class="font-bold">${nonCprpPct}</td>
+            <td>${cprp.toFixed(2)}</td>
+            <td class="font-bold">${cprpPct}</td>
+            <td class="font-semibold">${totalIklan.toFixed(2)}</td>
+            <td class="bg-orange-50 font-bold text-gray-800">${availDisplay}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
 
         function resetByDateFilter() {
             setTodayDateDefault();
