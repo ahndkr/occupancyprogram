@@ -119,7 +119,7 @@
                     </div>
 
                     <div class="flex items-center gap-1">
-                        <label class="font-semibold text-xs">Sampai:</label>
+                        <label class="font-semibold text-xs">"-":</label>
                         <input type="date" id="endDateByProg" class="p-1 border rounded bg-white text-xs">
                     </div>
 
@@ -217,35 +217,16 @@
         function updateAsOfFromData1() {
     if (!data1 || data1.length === 0) return;
 
-    // 1. Cari berdasarkan nama kolom/header yang umum untuk As Of
-    const sampleRow = data1[0];
-    const keys = Object.keys(sampleRow);
-    const targetKey = keys.find(k => {
-        const lower = k.toLowerCase();
-        return lower.includes('as of') || lower.includes('as_of') || lower.includes('update');
-    });
+    // Mengambil seluruh nama header (Key) dari baris ke-1 CSV
+    const headers = Object.keys(data1[0]);
 
-    if (targetKey && sampleRow[targetKey]) {
-        document.getElementById('asOfText').innerText = sampleRow[targetKey].trim();
-        return;
+    // Cell G1 berada di indeks ke-6 (karena indeks array dimulai dari 0: A=0, B=1, C=2, D=3, E=4, F=5, G=6)
+    if (headers.length >= 7) {
+        const cellG1Value = headers[6].trim();
+        document.getElementById('asOfText').innerText = cellG1Value;
+    } else {
+        document.getElementById('asOfText').innerText = '-';
     }
-
-    // 2. Jika tidak ada kolom khusus, cari nilai bertipe tanggal (misal: 14/09/2026 atau 2026-09-14)
-    for (let row of data1) {
-        for (let val of Object.values(row)) {
-            if (val && typeof val === 'string') {
-                const cleanVal = val.trim();
-                // Match format tanggal umum: DD/MM/YYYY, YYYY-MM-DD, DD-MMM-YYYY, dsb.
-                if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\(|^\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}\)/.test(cleanVal)) {
-                    document.getElementById('asOfText').innerText = cleanVal;
-                    return;
-                }
-            }
-        }
-    }
-
-    // 3. Fallback default jika tanggal tidak ditemukan
-    document.getElementById('asOfText').innerText = '-';
 }
 
         function initDashboard() {
