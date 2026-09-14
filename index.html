@@ -119,7 +119,7 @@
                     </div>
 
                     <div class="flex items-center gap-1">
-                        <label class="font-semibold text-xs">"-":</label>
+                        <label class="font-semibold text-xs">-</label>
                         <input type="date" id="endDateByProg" class="p-1 border rounded bg-white text-xs">
                     </div>
 
@@ -215,18 +215,29 @@
         }
 
         function updateAsOfFromData1() {
-    if (!data1 || data1.length === 0) return;
+            if (!data1 || data1.length === 0) return;
 
-    // Mengambil seluruh nama header (Key) dari baris ke-1 CSV
-    const headers = Object.keys(data1[0]);
-
-    // Cell G1 berada di indeks ke-6 (karena indeks array dimulai dari 0: A=0, B=1, C=2, D=3, E=4, F=5, G=6)
-    if (headers.length >= 7) {
-        const cellG1Value = headers[6].trim();
-        document.getElementById('asOfText').innerText = cellG1Value;
-    } else {
-        document.getElementById('asOfText').innerText = '-';
+    // 1. Ambil dari nama Header kolom ke-7 (Index 6 / Cell G1 jika G1 dijadikan header)
+            const headers = Object.keys(data1[0]);
+            if (headers.length >= 7 && headers[6] && !headers[6].startsWith('__parsed_extra')) {
+            const headerValue = headers[6].trim();
+            if (headerValue !== '' && headerValue !== 'undefined') {
+            document.getElementById('asOfText').innerText = headerValue;
+            return;
+        }
     }
+
+    // 2. Ambil dari isi baris ke-1 kolom ke-7 (jika baris 1 Sheets adalah data)
+            const firstRowValues = Object.values(data1[0]);
+            if (firstRowValues.length >= 7 && firstRowValues[6]) {
+            const cellValue = String(firstRowValues[6]).trim();
+            if (cellValue !== '') {
+            document.getElementById('asOfText').innerText = cellValue;
+            return;
+        }
+    }
+
+    document.getElementById('asOfText').innerText = '-';
 }
 
         function initDashboard() {
