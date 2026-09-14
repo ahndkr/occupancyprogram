@@ -215,23 +215,38 @@
         }
 
         function updateAsOfFromData1() {
-            if (data1.length > 0) {
-                const firstRow = data1[0];
-                const headers = Object.keys(firstRow);
-                
-                const updateKey = headers.find(h => 
-                    h.toUpperCase().includes('AS OF') || 
-                    h.toUpperCase().includes('UPDATE') || 
-                    h.toUpperCase().includes('DATE')
-                );
+    if (!data1 || data1.length === 0) return;
 
-                if (updateKey && firstRow[updateKey]) {
-                    document.getElementById('asOfText').innerText = firstRow[updateKey].trim();
-                } else if (headers.length > 0) {
-                    document.getElementById('asOfText').innerText = String(Object.values(firstRow)[0]).trim();
+    // 1. Cari berdasarkan nama kolom/header yang umum untuk As Of
+    const sampleRow = data1[0];
+    const keys = Object.keys(sampleRow);
+    const targetKey = keys.find(k => {
+        const lower = k.toLowerCase();
+        return lower.includes('as of') || lower.includes('as_of') || lower.includes('update');
+    });
+
+    if (targetKey && sampleRow[targetKey]) {
+        document.getElementById('asOfText').innerText = sampleRow[targetKey].trim();
+        return;
+    }
+
+    // 2. Jika tidak ada kolom khusus, cari nilai bertipe tanggal (misal: 14/09/2026 atau 2026-09-14)
+    for (let row of data1) {
+        for (let val of Object.values(row)) {
+            if (val && typeof val === 'string') {
+                const cleanVal = val.trim();
+                // Match format tanggal umum: DD/MM/YYYY, YYYY-MM-DD, DD-MMM-YYYY, dsb.
+                if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}\(|^\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}\)/.test(cleanVal)) {
+                    document.getElementById('asOfText').innerText = cleanVal;
+                    return;
                 }
             }
         }
+    }
+
+    // 3. Fallback default jika tanggal tidak ditemukan
+    document.getElementById('asOfText').innerText = '-';
+}
 
         function initDashboard() {
             const programs = [...new Set(data2.map(item => item.PROGRAM))].filter(Boolean).sort();
