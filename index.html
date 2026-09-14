@@ -16,26 +16,34 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-    th, td { 
-        border: 1px solid #4b5563; 
-        text-align: center; 
-        vertical-align: middle !important; /* Membuat teks persis di tengah vertikal */
-        padding: 4px 4px !important; 
-        font-size: 10.5px !important; 
-        white-space: nowrap;
-        line-height: 1.2 !important; /* Mencegah teks menempel/terpotong garis */
-    }
+        /* Perbaikan CSS Utama untuk Alignment & Rendering Gambar */
+        table {
+            border-collapse: collapse !important;
+        }
 
-    .bg-blue-header { background-color: #2563eb; color: white; }
-    .bg-blue-subhead { background-color: #3b82f6; color: white; }
-    .bg-blue-accent { background-color: #60a5fa; color: white; }
-    .bg-blue-light { background-color: #eff6ff; }
+        th, td { 
+            border: 1px solid #4b5563 !important; 
+            text-align: center !important; 
+            vertical-align: middle !important; /* Presisi di tengah vertikal */
+            padding: 4px 3px !important; 
+            font-size: 10px !important; 
+            white-space: nowrap !important;
+            line-height: 1.2 !important;
+        }
 
-    .bg-yellow-header { background-color: #eab308; color: black; }
-    .bg-yellow-subhead { background-color: #fef08a; color: black; }
-    .bg-orange-subhead { background-color: #fce4d6; color: black; }
-</style>
+        th {
+            height: 28px !important; /* Mengunci tinggi sel header agar teks tidak terpotong */
+        }
 
+        .bg-blue-header { background-color: #2563eb; color: white; }
+        .bg-blue-subhead { background-color: #3b82f6; color: white; }
+        .bg-blue-accent { background-color: #60a5fa; color: white; }
+        .bg-blue-light { background-color: #eff6ff; }
+
+        .bg-yellow-header { background-color: #eab308; color: black; }
+        .bg-yellow-subhead { background-color: #fef08a; color: black; }
+        .bg-orange-subhead { background-color: #fce4d6; color: black; }
+    </style>
 </head>
 <body class="bg-gray-100 p-3 font-sans text-xs">
 
@@ -87,31 +95,33 @@
                     </div>
                 </div>
 
-                <div id="byDateTitle" class="bg-blue-subhead text-white font-bold text-center py-1.5 text-xs uppercase tracking-wide">
-                    TANGGAL
-                </div>
+                <div id="captureAreaByDate" class="w-full bg-white">
+                    <div id="byDateTitle" class="bg-blue-subhead text-white font-bold text-center py-1.5 text-xs uppercase tracking-wide">
+                        TANGGAL
+                    </div>
 
-                <div class="overflow-x-auto p-1">
-                    <table class="w-full border-collapse">
-                        <thead>
-                            <tr class="bg-blue-subhead text-white font-bold">
-                                <th rowspan="2" class="px-2">Program</th>
-                                <th rowspan="2" class="px-1">Slot<br>Time</th>
-                                <th rowspan="2" class="px-1">Slot Dur<br>(Menit)</th>
-                                <th rowspan="2" class="bg-blue-accent px-1">TOTAL<br>CB DUR</th>
-                                <th colspan="5" class="px-1">DURASI IKLAN</th>
-                                <th rowspan="2" class="bg-blue-accent px-1">AVAIL CB</th>
-                            </tr>
-                            <tr class="bg-blue-subhead text-white font-bold">
-                                <th class="px-1">CPRP</th>
-                                <th class="px-0.5">%</th>
-                                <th class="px-1">NON CPRP</th>
-                                <th class="px-0.5">%</th>
-                                <th class="px-1">TOTAL</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBodyByDate"></tbody>
-                    </table>
+                    <div class="table-container overflow-x-auto p-1">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-blue-subhead text-white font-bold">
+                                    <th rowspan="2" class="px-2">Program</th>
+                                    <th rowspan="2" class="px-1">Slot<br>Time</th>
+                                    <th rowspan="2" class="px-1">Slot Dur<br>(Menit)</th>
+                                    <th rowspan="2" class="bg-blue-accent px-1">TOTAL<br>CB DUR</th>
+                                    <th colspan="5" class="px-1">DURASI IKLAN</th>
+                                    <th rowspan="2" class="bg-blue-accent px-1">AVAIL CB</th>
+                                </tr>
+                                <tr class="bg-blue-subhead text-white font-bold">
+                                    <th class="px-1">CPRP</th>
+                                    <th class="px-0.5">%</th>
+                                    <th class="px-1">NON CPRP</th>
+                                    <th class="px-0.5">%</th>
+                                    <th class="px-1">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBodyByDate"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -152,33 +162,35 @@
                     </div>
                 </div>
 
-                <div id="byProgTitle" class="bg-yellow-subhead font-bold text-center py-1.5 text-xs uppercase tracking-wide border-b border-black">
-                    NAMA PROGRAM
-                </div>
+                <div id="captureAreaByProg" class="w-full bg-white">
+                    <div id="byProgTitle" class="bg-yellow-subhead font-bold text-center py-1.5 text-xs uppercase tracking-wide border-b border-black">
+                        NAMA PROGRAM
+                    </div>
 
-                <div class="overflow-x-auto p-1">
-                    <table class="w-full border-collapse">
-                        <thead>
-                            <tr class="bg-yellow-header font-bold">
-                                <th rowspan="2" class="px-1">Date</th>
-                                <th rowspan="2" class="px-1">Slot Time</th>
-                                <th rowspan="2" class="px-1">Slot Dur<br>(Menit)</th>
-                                <th colspan="2" class="bg-orange-subhead px-1">TOTAL CB DUR</th>
-                                <th colspan="5" class="px-1">DURASI IKLAN (Menit)</th>
-                                <th rowspan="2" class="bg-orange-subhead px-1">AVAIL</th>
-                            </tr>
-                            <tr class="bg-yellow-header font-bold">
-                                <th class="bg-orange-subhead px-1">Dur</th>
-                                <th class="bg-orange-subhead px-0.5">%</th>
-                                <th class="px-1">NON CPRP</th>
-                                <th class="px-0.5">%</th>
-                                <th class="px-1">CPRP</th>
-                                <th class="px-0.5">%</th>
-                                <th class="px-1">TOTAL</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tableBodyByProg"></tbody>
-                    </table>
+                    <div class="table-container overflow-x-auto p-1">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-yellow-header font-bold">
+                                    <th rowspan="2" class="px-1">Date</th>
+                                    <th rowspan="2" class="px-1">Slot Time</th>
+                                    <th rowspan="2" class="px-1">Slot Dur<br>(Menit)</th>
+                                    <th colspan="2" class="bg-orange-subhead px-1">TOTAL CB DUR</th>
+                                    <th colspan="5" class="px-1">DURASI IKLAN (Menit)</th>
+                                    <th rowspan="2" class="bg-orange-subhead px-1">AVAIL</th>
+                                </tr>
+                                <tr class="bg-yellow-header font-bold">
+                                    <th class="bg-orange-subhead px-1">Dur</th>
+                                    <th class="bg-orange-subhead px-0.5">%</th>
+                                    <th class="px-1">NON CPRP</th>
+                                    <th class="px-0.5">%</th>
+                                    <th class="px-1">CPRP</th>
+                                    <th class="px-0.5">%</th>
+                                    <th class="px-1">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBodyByProg"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -392,7 +404,6 @@
                     return rowTimestamp >= startTimestamp;
                 });
             }
-
             if (endTimestamp) {
                 progSchedules = progSchedules.filter(d => {
                     if (!d.TGL) return false;
@@ -484,75 +495,55 @@
             XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
         }
 
-// FUNGSI EKSPORT KE GAMBAR (PNG) - DIPERBAIKI VERTICAL ALIGNMENT & HEADER
-function downloadImage(elementId, filename) {
-    const cardElement = document.getElementById(elementId);
-    if (!cardElement) return;
+        // FUNGSI EKSPORT KE GAMBAR (PNG) - DIPERBAIKI SECARA AKURAT
+        function downloadImage(cardId, filename) {
+            const captureArea = cardId === 'cardByDate' 
+                ? document.getElementById('captureAreaByDate') 
+                : document.getElementById('captureAreaByProg');
 
-    const tableTitle = cardElement.querySelector('#byDateTitle') || cardElement.querySelector('#byProgTitle');
-    const tableElement = cardElement.querySelector('table');
-    
-    if (!tableElement) return;
+            if (!captureArea) return;
 
-    // 1. Ambil lebar presisi dari tabel asli
-    const originalWidth = tableElement.offsetWidth;
+            const tableContainer = captureArea.querySelector('.table-container');
 
-    // 2. Buat container pembungkus sementara
-    const wrapper = document.createElement('div');
-    wrapper.style.position = 'absolute';
-    wrapper.style.left = '-9999px';
-    wrapper.style.top = '-9999px';
-    wrapper.style.backgroundColor = '#ffffff';
-    wrapper.style.padding = '8px';
-    wrapper.style.width = originalWidth + 16 + 'px'; // Lebar presisi sesuai tabel
+            // Buka scroll temporary agar gambar dirender utuh tanpa terpotong
+            if (tableContainer) {
+                tableContainer.classList.remove('overflow-x-auto');
+                tableContainer.style.width = 'max-content';
+            }
 
-    // 3. Masukkan Judul Tanggal/Program di atas tabel
-    if (tableTitle) {
-        const titleClone = tableTitle.cloneNode(true);
-        titleClone.style.width = '100%';
-        titleClone.style.boxSizing = 'border-box';
-        titleClone.style.display = 'block';
-        titleClone.style.padding = '6px 0';
-        wrapper.appendChild(titleClone);
-    }
+            html2canvas(captureArea, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                logging: false,
+                onclone: (clonedDoc) => {
+                    // Paksa vertical-align middle di dokumen clone saat ditangkap
+                    const ths = clonedDoc.querySelectorAll('th');
+                    ths.forEach(th => {
+                        th.style.verticalAlign = 'middle';
+                        th.style.display = 'table-cell';
+                    });
+                }
+            }).then(canvas => {
+                const link = document.createElement('a');
+                const dateStr = new Date().toISOString().slice(0, 10);
+                link.download = `${filename}_${dateStr}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
 
-    // 4. Clone tabel tanpa merusak struktur <thead>
-    const tableClone = tableElement.cloneNode(true);
-    tableClone.style.width = '100%';
-    tableClone.style.margin = '0';
-    
-    // Paksa semua cell pada clone menggunakan vertical-align middle
-    const cells = tableClone.querySelectorAll('th, td');
-    cells.forEach(cell => {
-        cell.style.verticalAlign = 'middle';
-        cell.style.lineHeight = '1.2';
-    });
-
-    wrapper.appendChild(tableClone);
-    document.body.appendChild(wrapper);
-
-    // 5. Render ke Gambar
-    html2canvas(wrapper, {
-        scale: 2, // Hasil gambar tajam
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        logging: false
-    }).then(canvas => {
-        const link = document.createElement('a');
-        const dateStr = new Date().toISOString().slice(0, 10);
-        link.download = `${filename}_${dateStr}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        
-        document.body.removeChild(wrapper);
-    }).catch(err => {
-        console.error(err);
-        if (document.body.contains(wrapper)) {
-            document.body.removeChild(wrapper);
+                // Kembalikan layout web ke kondisi semula
+                if (tableContainer) {
+                    tableContainer.classList.add('overflow-x-auto');
+                    tableContainer.style.width = '';
+                }
+            }).catch(err => {
+                console.error(err);
+                if (tableContainer) {
+                    tableContainer.classList.add('overflow-x-auto');
+                    tableContainer.style.width = '';
+                }
+            });
         }
-    });
-}
-
     </script>
 </body>
 </html>
