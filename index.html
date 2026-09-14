@@ -16,23 +16,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        th, td { 
-            border: 1px solid #4b5563; 
-            text-align: center; 
-            padding: 2px 3px !important; 
-            font-size: 10.5px !important; 
-            white-space: nowrap;
-        }
+    th, td { 
+        border: 1px solid #4b5563; 
+        text-align: center; 
+        vertical-align: middle !important; /* Membuat teks persis di tengah vertikal */
+        padding: 4px 4px !important; 
+        font-size: 10.5px !important; 
+        white-space: nowrap;
+        line-height: 1.2 !important; /* Mencegah teks menempel/terpotong garis */
+    }
 
-        .bg-blue-header { background-color: #2563eb; color: white; }
-        .bg-blue-subhead { background-color: #3b82f6; color: white; }
-        .bg-blue-accent { background-color: #60a5fa; color: white; }
-        .bg-blue-light { background-color: #eff6ff; }
+    .bg-blue-header { background-color: #2563eb; color: white; }
+    .bg-blue-subhead { background-color: #3b82f6; color: white; }
+    .bg-blue-accent { background-color: #60a5fa; color: white; }
+    .bg-blue-light { background-color: #eff6ff; }
 
-        .bg-yellow-header { background-color: #eab308; color: black; }
-        .bg-yellow-subhead { background-color: #fef08a; color: black; }
-        .bg-orange-subhead { background-color: #fce4d6; color: black; }
-    </style>
+    .bg-yellow-header { background-color: #eab308; color: black; }
+    .bg-yellow-subhead { background-color: #fef08a; color: black; }
+    .bg-orange-subhead { background-color: #fce4d6; color: black; }
+</style>
+
 </head>
 <body class="bg-gray-100 p-3 font-sans text-xs">
 
@@ -481,7 +484,7 @@
             XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
         }
 
-        // FUNGSI EKSPORT KE GAMBAR (PNG) - DIPERBAIKI AGAR PROPORSIONAL
+// FUNGSI EKSPORT KE GAMBAR (PNG) - DIPERBAIKI VERTICAL ALIGNMENT & HEADER
 function downloadImage(elementId, filename) {
     const cardElement = document.getElementById(elementId);
     if (!cardElement) return;
@@ -491,51 +494,49 @@ function downloadImage(elementId, filename) {
     
     if (!tableElement) return;
 
-    // Buat container sementara di luar layar
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '-9999px';
-    container.style.backgroundColor = '#ffffff';
-    container.style.padding = '10px';
-    container.style.width = 'max-content';
+    // 1. Ambil lebar presisi dari tabel asli
+    const originalWidth = tableElement.offsetWidth;
 
-    // Clone tabel agar tidak mengganggu tampilan asli
-    const tableClone = tableElement.cloneNode(true);
-    tableClone.style.width = '100%';
-    tableClone.style.tableLayout = 'auto';
+    // 2. Buat container pembungkus sementara
+    const wrapper = document.createElement('div');
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = '-9999px';
+    wrapper.style.top = '-9999px';
+    wrapper.style.backgroundColor = '#ffffff';
+    wrapper.style.padding = '8px';
+    wrapper.style.width = originalWidth + 16 + 'px'; // Lebar presisi sesuai tabel
 
-    // Jika ada header judul (tanggal/program), sisipkan sebagai baris paling atas tabel clone
+    // 3. Masukkan Judul Tanggal/Program di atas tabel
     if (tableTitle) {
-        const titleText = tableTitle.innerText;
-        // Hitung total kolom tabel untuk colspan
-        const colCount = tableClone.rows[0] ? tableClone.rows[0].cells.length : 10;
-        
-        // Ambil class / warna background dari judul asli
-        const titleClass = tableTitle.className;
-
-        const titleRow = document.createElement('tr');
-        titleRow.innerHTML = `
-            <th colspan="15" class="${titleClass}" style="padding: 8px !important; font-size: 13px !important; text-align: center;">
-                ${titleText}
-            </th>
-        `;
-
-        // Masukkan di paling atas thead
-        const thead = tableClone.querySelector('thead');
-        if (thead) {
-            thead.insertBefore(titleRow, thead.firstChild);
-        }
+        const titleClone = tableTitle.cloneNode(true);
+        titleClone.style.width = '100%';
+        titleClone.style.boxSizing = 'border-box';
+        titleClone.style.display = 'block';
+        titleClone.style.padding = '6px 0';
+        wrapper.appendChild(titleClone);
     }
 
-    container.appendChild(tableClone);
-    document.body.appendChild(container);
+    // 4. Clone tabel tanpa merusak struktur <thead>
+    const tableClone = tableElement.cloneNode(true);
+    tableClone.style.width = '100%';
+    tableClone.style.margin = '0';
+    
+    // Paksa semua cell pada clone menggunakan vertical-align middle
+    const cells = tableClone.querySelectorAll('th, td');
+    cells.forEach(cell => {
+        cell.style.verticalAlign = 'middle';
+        cell.style.lineHeight = '1.2';
+    });
 
-    // Capture menggunakan html2canvas
-    html2canvas(container, {
-        scale: 2, // Hasil gambar tajam & bersih
+    wrapper.appendChild(tableClone);
+    document.body.appendChild(wrapper);
+
+    // 5. Render ke Gambar
+    html2canvas(wrapper, {
+        scale: 2, // Hasil gambar tajam
         backgroundColor: '#ffffff',
-        useCORS: true
+        useCORS: true,
+        logging: false
     }).then(canvas => {
         const link = document.createElement('a');
         const dateStr = new Date().toISOString().slice(0, 10);
@@ -543,11 +544,11 @@ function downloadImage(elementId, filename) {
         link.href = canvas.toDataURL('image/png');
         link.click();
         
-        document.body.removeChild(container);
+        document.body.removeChild(wrapper);
     }).catch(err => {
         console.error(err);
-        if (document.body.contains(container)) {
-            document.body.removeChild(container);
+        if (document.body.contains(wrapper)) {
+            document.body.removeChild(wrapper);
         }
     });
 }
