@@ -13,7 +13,8 @@
 
     <!-- Library untuk Export Excel dan Gambar -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Menggunakan html-to-image menggantikan html2canvas agar rendering rowspan 100% akurat -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 
     <style>
         table {
@@ -25,22 +26,14 @@
             border: 1px solid #334155 !important; 
             text-align: center !important; 
             vertical-align: middle !important; 
-            padding: 4px 5px !important; 
+            padding: 5px 4px !important; 
             font-size: 11px !important; 
             white-space: nowrap !important;
+            line-height: 1.25 !important;
         }
 
-        /* Solusi Utama: Menjaga baseline & alignment teks header saat ditangkap html2canvas */
-        .th-content {
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
-            align-items: center !important;
-            height: 100% !important;
-            min-height: 32px !important;
-            line-height: 1.2 !important;
-            text-align: center !important;
-            font-weight: bold !important;
+        th {
+            font-weight: 700 !important;
         }
 
         .bg-blue-header { background-color: #2563eb; color: white; }
@@ -112,19 +105,19 @@
                         <table class="w-full border-collapse">
                             <thead>
                                 <tr class="bg-blue-subhead text-white font-bold">
-                                    <th rowspan="2"><div class="th-content">Program</div></th>
-                                    <th rowspan="2"><div class="th-content">Slot<br>Time</div></th>
-                                    <th rowspan="2"><div class="th-content">Slot Dur<br>(Menit)</div></th>
-                                    <th rowspan="2" class="bg-blue-accent"><div class="th-content">TOTAL<br>CB DUR</div></th>
-                                    <th colspan="5"><div class="th-content">DURASI IKLAN</div></th>
-                                    <th rowspan="2" class="bg-blue-accent"><div class="th-content">AVAIL CB</div></th>
+                                    <th rowspan="2">Program</th>
+                                    <th rowspan="2">Slot<br>Time</th>
+                                    <th rowspan="2">Slot Dur<br>(Menit)</th>
+                                    <th rowspan="2" class="bg-blue-accent">TOTAL<br>CB DUR</th>
+                                    <th colspan="5">DURASI IKLAN</th>
+                                    <th rowspan="2" class="bg-blue-accent">AVAIL CB</th>
                                 </tr>
                                 <tr class="bg-blue-subhead text-white font-bold">
-                                    <th><div class="th-content">CPRP</div></th>
-                                    <th><div class="th-content">%</div></th>
-                                    <th><div class="th-content">NON CPRP</div></th>
-                                    <th><div class="th-content">%</div></th>
-                                    <th><div class="th-content">TOTAL</div></th>
+                                    <th>CPRP</th>
+                                    <th>%</th>
+                                    <th>NON CPRP</th>
+                                    <th>%</th>
+                                    <th>TOTAL</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBodyByDate"></tbody>
@@ -179,21 +172,21 @@
                         <table class="w-full border-collapse">
                             <thead>
                                 <tr class="bg-yellow-header font-bold">
-                                    <th rowspan="2"><div class="th-content">Date</div></th>
-                                    <th rowspan="2"><div class="th-content">Slot Time</div></th>
-                                    <th rowspan="2"><div class="th-content">Slot Dur<br>(Menit)</div></th>
-                                    <th colspan="2" class="bg-orange-subhead"><div class="th-content">TOTAL CB DUR</div></th>
-                                    <th colspan="5"><div class="th-content">DURASI IKLAN (Menit)</div></th>
-                                    <th rowspan="2" class="bg-orange-subhead"><div class="th-content">AVAIL</div></th>
+                                    <th rowspan="2">Date</th>
+                                    <th rowspan="2">Slot Time</th>
+                                    <th rowspan="2">Slot Dur<br>(Menit)</th>
+                                    <th colspan="2" class="bg-orange-subhead">TOTAL CB DUR</th>
+                                    <th colspan="5">DURASI IKLAN (Menit)</th>
+                                    <th rowspan="2" class="bg-orange-subhead">AVAIL</th>
                                 </tr>
                                 <tr class="bg-yellow-header font-bold">
-                                    <th class="bg-orange-subhead"><div class="th-content">Dur</div></th>
-                                    <th class="bg-orange-subhead"><div class="th-content">%</div></th>
-                                    <th><div class="th-content">NON CPRP</div></th>
-                                    <th><div class="th-content">%</div></th>
-                                    <th><div class="th-content">CPRP</div></th>
-                                    <th><div class="th-content">%</div></th>
-                                    <th><div class="th-content">TOTAL</div></th>
+                                    <th class="bg-orange-subhead">Dur</th>
+                                    <th class="bg-orange-subhead">%</th>
+                                    <th>NON CPRP</th>
+                                    <th>%</th>
+                                    <th>CPRP</th>
+                                    <th>%</th>
+                                    <th>TOTAL</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBodyByProg"></tbody>
@@ -387,7 +380,8 @@
                 tbody.appendChild(tr);
             });
         }
-function renderByProgTable() {
+
+        function renderByProgTable() {
             const selectedProg = document.getElementById('programFilter').value;
             if (!selectedProg) return;
 
@@ -420,7 +414,7 @@ function renderByProgTable() {
                 });
             }
 
-            if (progSchedules.length === 0) {
+if (progSchedules.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="11" class="py-4 text-gray-500 font-semibold">Tidak ada data untuk rentang tanggal ini</td></tr>`;
                 return;
             }
@@ -503,7 +497,7 @@ function renderByProgTable() {
             XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
         }
 
-        // FUNGSI EKSPORT GAMBAR (PNG)
+        // FUNGSI EKSPORT GAMBAR DENGAN HTML-TO-IMAGE (100% PRESISI)
         function downloadImage(cardId, filename) {
             const captureArea = cardId === 'cardByDate' 
                 ? document.getElementById('captureAreaByDate') 
@@ -511,41 +505,17 @@ function renderByProgTable() {
 
             if (!captureArea) return;
 
-            const tableContainer = captureArea.querySelector('.table-container');
-
-            if (tableContainer) {
-                tableContainer.style.overflow = 'visible';
-            }
-
-            html2canvas(captureArea, {
-                scale: 2,
+            htmlToImage.toPng(captureArea, {
                 backgroundColor: '#ffffff',
-                useCORS: true,
-                logging: false,
-                onclone: (clonedDoc) => {
-                    const contents = clonedDoc.querySelectorAll('.th-content');
-                    contents.forEach(el => {
-                        el.style.display = 'flex';
-                        el.style.flexDirection = 'column';
-                        el.style.justifyContent = 'center';
-                        el.style.alignItems = 'center';
-                    });
-                }
-            }).then(canvas => {
+                pixelRatio: 2
+            }).then(function (dataUrl) {
                 const link = document.createElement('a');
                 const dateStr = new Date().toISOString().slice(0, 10);
                 link.download = `${filename}_${dateStr}.png`;
-                link.href = canvas.toDataURL('image/png');
+                link.href = dataUrl;
                 link.click();
-
-                if (tableContainer) {
-                    tableContainer.style.overflow = 'auto';
-                }
-            }).catch(err => {
-                console.error(err);
-                if (tableContainer) {
-                    tableContainer.style.overflow = 'auto';
-                }
+            }).catch(function (error) {
+                console.error('Gagal mengambil gambar:', error);
             });
         }
     </script>
