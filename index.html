@@ -11,9 +11,11 @@
     <!-- PapaParse untuk membaca CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
-    <!-- Library untuk Export Excel dan Gambar -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Menggunakan html-to-image menggantikan html2canvas agar rendering rowspan 100% akurat -->
+    <!-- Library ExcelJS & FileSaver untuk Export Excel Bergaya Dashboard -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- Library html-to-image untuk Export Gambar -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 
     <style>
@@ -414,7 +416,93 @@
                 });
             }
 
-if (progSchedules.length === 0) {
+if (daySchedules.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="py-4 text-gray-500 font-semibold">Tidak ada data untuk tanggal ini</td></tr>`;
+                return;
+            }
+
+            daySchedules.forEach(row => {
+                const progName = row.PROGRAM;
+                const rawSlotTime = row['SLOT TIME'] || row.SLOT_TIME || '';
+                const slotTimeDisplay = formatSlotTime(rawSlotTime);
+                
+                const rawSlotDur = row['SLOT DUR'] || row.SLOT_DUR || Object.values(row)[2] || '';
+                const slotDurMin = Math.round(timeToMinutes(rawSlotDur));
+
+                const cbDurMin = parseFloat(row['INVENTORY'] || row.INVENTORY || 0);
+
+                const ads = data1.filter(d => {
+                    const dDateObj = new Date(d.TANGGAL || d.TGL).setHours(0,0,0,0);
+                    return d.PROGRAM === progName && (dDateObj === targetDateObj || d.TANGGAL === selectedDate);
+                });
+
+                let nonCprp = 0;
+                let cprp = 0;
+
+                ads.forEach(ad => {
+                    const dur = parseFloat(ad['MENIT IKLAN'] || ad.MENIT_IKLAN || 0);
+                    if (ad.TIPE === 'NON CPRP') nonCprp += dur;
+                    if (ad.TIPE === 'CPRP') cprp += dur;
+                });
+
+                const totalIklan = nonCprp + cprp;
+                const cprpPct = totalIklan > 0 ? Math.round((cprp / totalIklan) * 100) + '%' : '-';
+                const nonCprpPct = totalIklan > 0 ? Math.round((nonCprp / totalIklan) * 100) + '%' : '-';
+
+                const availVal = cbDurMin - totalIklan;
+                const availDisplay = availVal <= 0 ? '-' : availVal.toFixed(2);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-left font-semibold px-2">${progName}</td>
+                    <td>${slotTimeDisplay}</td>
+                    <td>${slotDurMin}</td>
+                    <td class="bg-blue-light font-bold text-blue-900">${cbDurMin.toFixed(2)}</td>
+                    <td>${cprp.toFixed(2)}</td>
+                    <td>${cprpPct}</td>
+                    <td>${nonCprp.toFixed(2)}</td>
+                    <td>${nonCprpPct}</td>
+                    <td class="font-bold">${totalIklan.toFixed(2)}</td>
+                    <td class="bg-blue-light font-bold text-blue-900">${availDisplay}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderByProgTable() {
+            const selectedProg = document.getElementById('programFilter').value;
+            if (!selectedProg) return;
+
+            const startDateVal = document.getElementById('startDateByProg').value;
+            const endDateVal = document.getElementById('endDateByProg').value;
+
+            document.getElementById('byProgTitle').innerText = selectedProg;
+
+            const tbody = document.getElementById('tableBodyByProg');
+            tbody.innerHTML = '';
+
+            let progSchedules = data2.filter(d => d.PROGRAM === selectedProg);
+
+            const startTimestamp = startDateVal ? new Date(startDateVal).setHours(0,0,0,0) : null;
+            const endTimestamp = endDateVal ? new Date(endDateVal).setHours(0,0,0,0) : null;
+
+            if (startTimestamp) {
+                progSchedules = progSchedules.filter(d => {
+                    if (!d.TGL) return false;
+                    const rowTimestamp = new Date(d.TGL).setHours(0,0,0,0);
+                    return rowTimestamp >= startTimestamp;
+                });
+            }
+
+            if (endTimestamp) {
+                progSchedules = progSchedules.filter(d => {
+                    if (!d.TGL) return false;
+                    const rowTimestamp = new Date(d.TGL).setHours(0,0,0,0);
+                    return rowTimestamp <= endTimestamp;
+                });
+            }
+
+            if (progSchedules.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="11" class="py-4 text-gray-500 font-semibold">Tidak ada data untuk rentang tanggal ini</td></tr>`;
                 return;
             }
@@ -482,70 +570,215 @@ if (progSchedules.length === 0) {
             renderByProgTable();
         }
 
-        // FUNGSI EKSPORT EXCEL
-        function downloadExcel(tableBodyId, filename) {
+        // FUNGSI EKSPORT EXCEL BERGAYA DASHBOARD (EXCELJS)
+        async function downloadExcel(tableBodyId, filename) {
             const tbody = document.getElementById(tableBodyId);
-            const table = tbody.closest('table');
-            
             if (!tbody || tbody.rows.length === 0 || tbody.innerText.includes('Tidak ada data')) {
                 alert('Tidak ada data tabel untuk di-download!');
                 return;
             }
 
-            const wb = XLSX.utils.table_to_book(table, { sheet: "Sheet1" });
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Occupancy Data');
+
+            const isByDate = tableBodyId === 'tableBodyByDate';
+            const borderStyle = {
+                top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+                right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+            };
+
+            // 1. Judul Atas Tabel
+            const titleText = isByDate 
+                ? document.getElementById('byDateTitle').innerText 
+                : document.getElementById('byProgTitle').innerText;
+
+            const titleRow = worksheet.addRow([titleText]);
+            const lastColChar = isByDate ? 'J' : 'K';
+            worksheet.mergeCells(`A1:${lastColChar}1`);
+
+            const titleCell = titleRow.getCell(1);
+            titleCell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: isByDate ? 'FFFFFFFF' : 'FF000000' } };
+            titleCell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: isByDate ? 'FF3B82F6' : 'FFFDE047' }
+            };
+            titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+            titleCell.border = borderStyle;
+
+            // 2. Susun Header Bertingkat (Row 2 & Row 3)
+            if (isByDate) {
+                worksheet.addRow(['Program', 'Slot Time', 'Slot Dur\n(Menit)', 'TOTAL\nCB DUR', 'DURASI IKLAN', '', '', '', '', 'AVAIL CB']);
+                worksheet.addRow(['', '', '', '', 'CPRP', '%', 'NON CPRP', '%', 'TOTAL', '']);
+
+                worksheet.mergeCells('A2:A3');
+                worksheet.mergeCells('B2:B3');
+                worksheet.mergeCells('C2:C3');
+                worksheet.mergeCells('D2:D3');
+                worksheet.mergeCells('E2:I2');
+                worksheet.mergeCells('J2:J3');
+
+                [2, 3].forEach(r => {
+                    const row = worksheet.getRow(r);
+                    row.height = 22;
+                    row.eachCell({ includeEmpty: true }, cell => {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2563EB' } };
+                        cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFFFFFFF' } };
+                        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                        cell.border = borderStyle;
+                    });
+                });
+            } else {
+                worksheet.addRow(['Date', 'Slot Time', 'Slot Dur\n(Menit)', 'TOTAL CB DUR', '', 'DURASI IKLAN (Menit)', '', '', '', '', 'AVAIL']);
+                worksheet.addRow(['', '', '', 'Dur', '%', 'NON CPRP', '%', 'CPRP', '%', 'TOTAL', '']);
+
+                worksheet.mergeCells('A2:A3');
+                worksheet.mergeCells('B2:B3');
+                worksheet.mergeCells('C2:C3');
+                worksheet.mergeCells('D2:E2');
+                worksheet.mergeCells('F2:J2');
+                worksheet.mergeCells('K2:K3');
+
+                [2, 3].forEach(r => {
+                    const row = worksheet.getRow(r);
+                    row.height = 22;
+                    row.eachCell({ includeEmpty: true }, cell => {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEAB308' } };
+                        cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF000000' } };
+                        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                        cell.border = borderStyle;
+                    });
+                });
+
+                ['D2', 'E2', 'D3', 'E3', 'K2', 'K3'].forEach(pos => {
+                    worksheet.getCell(pos).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCE4D6' } };
+                });
+            }
+
+            // 3. Masukkan Data Baris
+            const trs = tbody.querySelectorAll('tr');
+            trs.forEach(tr => {
+                const rowValues = [];
+                tr.querySelectorAll('td').forEach(td => {
+                    let val = td.innerText.trim();
+                    if (val === '-') {
+                        rowValues.push('-');
+                    } else if (val.endsWith('%')) {
+                        let num = parseFloat(val.replace('%', ''));
+                        rowValues.push(isNaN(num) ? val : num / 100);
+                    } else {
+                        let num = parseFloat(val);
+                        rowValues.push(isNaN(num) ? val : num);
+                    }
+                });
+
+                const addedRow = worksheet.addRow(rowValues);
+                addedRow.height = 20;
+
+                addedRow.eachCell({ includeEmpty: true }, (cell, colNum) => {
+                    cell.border = borderStyle;
+                    cell.font = { name: 'Segoe UI', size: 9.5 };
+
+                    if (isByDate) {
+                        if (colNum === 1) cell.alignment = { horizontal: 'left', vertical: 'middle' };
+                        else if (colNum === 2) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                        else cell.alignment = { horizontal: 'right', vertical: 'middle' };
+
+                        if (colNum === 4 || colNum === 10) {
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } };
+                            cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF1E3A8A' } };
+                        }
+                        if (colNum === 9) cell.font = { name: 'Segoe UI', size: 9.5, bold: true };
+
+                        if (typeof cell.value === 'number') {
+                            if (colNum === 6 || colNum === 8) cell.numFmt = '0%';
+                            else if (colNum === 3) cell.numFmt = '#,##0';
+                            else cell.numFmt = '0.00';
+                        }
+                    } else {
+                        if (colNum <= 2) cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                        else cell.alignment = { horizontal: 'right', vertical: 'middle' };
+
+                        if (colNum === 4 || colNum === 5 || colNum === 11) {
+                            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7ED' } };
+                        }
+                        if (colNum === 7 || colNum === 9 || colNum === 11) cell.font = { name: 'Segoe UI', size: 9.5, bold: true };
+
+                        if (typeof cell.value === 'number') {
+                            if (colNum === 5 || colNum === 7 || colNum === 9) cell.numFmt = '0.0%';
+                            else if (colNum === 3) cell.numFmt = '#,##0';
+                            else cell.numFmt = '0.00';
+                        }
+                    }
+                });
+            });
+
+            // 4. Lebar Kolom
+            if (isByDate) {
+                worksheet.columns = [
+                    { width: 36 }, { width: 11 }, { width: 12 }, { width: 14 },
+                    { width: 11 }, { width: 9 },  { width: 11 }, { width: 9 },
+                    { width: 11 }, { width: 12 }
+                ];
+            } else {
+                worksheet.columns = [
+                    { width: 14 }, { width: 11 }, { width: 12 }, { width: 11 },
+                    { width: 9 },  { width: 11 }, { width: 9 },  { width: 11 },
+                    { width: 9 },  { width: 11 }, { width: 11 }
+                ];
+            }
+
+            // 5. Generate File
             const dateStr = new Date().toISOString().slice(0, 10);
-            XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
+            const buffer = await workbook.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), filename + '_' + dateStr + '.xlsx');
         }
 
-        // FUNGSI EKSPORT GAMBAR TANPA TERPOTONG DI HP (TANPA SCROLLBAR)
-function downloadImage(cardId, filename) {
-    const captureArea = cardId === 'cardByDate' 
-        ? document.getElementById('captureAreaByDate') 
-        : document.getElementById('captureAreaByProg');
+        // FUNGSI EKSPORT GAMBAR TANPA TERPOTONG DI HP
+        function downloadImage(cardId, filename) {
+            const captureArea = cardId === 'cardByDate' 
+                ? document.getElementById('captureAreaByDate') 
+                : document.getElementById('captureAreaByProg');
 
-    if (!captureArea) return;
+            if (!captureArea) return;
 
-    const tableContainer = captureArea.querySelector('.table-container');
-    const table = captureArea.querySelector('table');
+            const tableContainer = captureArea.querySelector('.table-container');
+            const table = captureArea.querySelector('table');
 
-    // 1. Simpan style asli tampilan HP
-    const origOverflow = tableContainer ? tableContainer.style.overflow : '';
-    const origWidth = captureArea.style.width;
+            const origOverflow = tableContainer ? tableContainer.style.overflow : '';
+            const origWidth = captureArea.style.width;
 
-    // 2. Hitung lebar penuh tabel yang tersembunyi
-    const fullWidth = table ? Math.max(table.scrollWidth, captureArea.scrollWidth) + 16 : captureArea.scrollWidth;
+            const fullWidth = table ? Math.max(table.scrollWidth, captureArea.scrollWidth) + 16 : captureArea.scrollWidth;
 
-    // 3. Paksa area melebar & sembunyikan scrollbar secara sementara
-    if (tableContainer) tableContainer.style.overflow = 'visible';
-    captureArea.style.width = `${fullWidth}px`;
+            if (tableContainer) tableContainer.style.overflow = 'visible';
+            captureArea.style.width = fullWidth + 'px';
 
-    // 4. Capture seluruh konten tabel
-    htmlToImage.toPng(captureArea, {
-        backgroundColor: '#ffffff',
-        pixelRatio: 2,
-        width: fullWidth,
-        style: {
-            width: `${fullWidth}px`,
-            maxWidth: 'none',
-            overflow: 'visible'
+            htmlToImage.toPng(captureArea, {
+                backgroundColor: '#ffffff',
+                pixelRatio: 2,
+                width: fullWidth,
+                style: {
+                    width: fullWidth + 'px',
+                    maxWidth: 'none',
+                    overflow: 'visible'
+                }
+            }).then(function (dataUrl) {
+                if (tableContainer) tableContainer.style.overflow = origOverflow;
+                captureArea.style.width = origWidth;
+
+                const link = document.createElement('a');
+                const dateStr = new Date().toISOString().slice(0, 10);
+                link.download = filename + '_' + dateStr + '.png';
+                link.href = dataUrl;
+                link.click();
+            }).catch(function (error) {
+                if (tableContainer) tableContainer.style.overflow = origOverflow;
+                captureArea.style.width = origWidth;
+                console.error('Gagal mengambil gambar:', error);
+            });
         }
-    }).then(function (dataUrl) {
-        // 5. Kembalikan tampilan UI HP ke kondisi semula (tetap scrollable)
-        if (tableContainer) tableContainer.style.overflow = origOverflow;
-        captureArea.style.width = origWidth;
-
-        const link = document.createElement('a');
-        const dateStr = new Date().toISOString().slice(0, 10);
-        link.download = `\({filename}_\){dateStr}.png`;
-        link.href = dataUrl;
-        link.click();
-    }).catch(function (error) {
-        // Kembalikan style jika gagal
-        if (tableContainer) tableContainer.style.overflow = origOverflow;
-        captureArea.style.width = origWidth;
-        console.error('Gagal mengambil gambar:', error);
-    });
-}
     </script>
 </body>
 </html>
