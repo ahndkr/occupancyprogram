@@ -497,27 +497,55 @@ if (progSchedules.length === 0) {
             XLSX.writeFile(wb, `${filename}_${dateStr}.xlsx`);
         }
 
-        // FUNGSI EKSPORT GAMBAR DENGAN HTML-TO-IMAGE (100% PRESISI)
-        function downloadImage(cardId, filename) {
-            const captureArea = cardId === 'cardByDate' 
-                ? document.getElementById('captureAreaByDate') 
-                : document.getElementById('captureAreaByProg');
+        // FUNGSI EKSPORT GAMBAR TANPA TERPOTONG DI HP (TANPA SCROLLBAR)
+function downloadImage(cardId, filename) {
+    const captureArea = cardId === 'cardByDate' 
+        ? document.getElementById('captureAreaByDate') 
+        : document.getElementById('captureAreaByProg');
 
-            if (!captureArea) return;
+    if (!captureArea) return;
 
-            htmlToImage.toPng(captureArea, {
-                backgroundColor: '#ffffff',
-                pixelRatio: 2
-            }).then(function (dataUrl) {
-                const link = document.createElement('a');
-                const dateStr = new Date().toISOString().slice(0, 10);
-                link.download = `${filename}_${dateStr}.png`;
-                link.href = dataUrl;
-                link.click();
-            }).catch(function (error) {
-                console.error('Gagal mengambil gambar:', error);
-            });
+    const tableContainer = captureArea.querySelector('.table-container');
+    const table = captureArea.querySelector('table');
+
+    // 1. Simpan style asli tampilan HP
+    const origOverflow = tableContainer ? tableContainer.style.overflow : '';
+    const origWidth = captureArea.style.width;
+
+    // 2. Hitung lebar penuh tabel yang tersembunyi
+    const fullWidth = table ? Math.max(table.scrollWidth, captureArea.scrollWidth) + 16 : captureArea.scrollWidth;
+
+    // 3. Paksa area melebar & sembunyikan scrollbar secara sementara
+    if (tableContainer) tableContainer.style.overflow = 'visible';
+    captureArea.style.width = `${fullWidth}px`;
+
+    // 4. Capture seluruh konten tabel
+    htmlToImage.toPng(captureArea, {
+        backgroundColor: '#ffffff',
+        pixelRatio: 2,
+        width: fullWidth,
+        style: {
+            width: `${fullWidth}px`,
+            maxWidth: 'none',
+            overflow: 'visible'
         }
+    }).then(function (dataUrl) {
+        // 5. Kembalikan tampilan UI HP ke kondisi semula (tetap scrollable)
+        if (tableContainer) tableContainer.style.overflow = origOverflow;
+        captureArea.style.width = origWidth;
+
+        const link = document.createElement('a');
+        const dateStr = new Date().toISOString().slice(0, 10);
+        link.download = `\({filename}_\){dateStr}.png`;
+        link.href = dataUrl;
+        link.click();
+    }).catch(function (error) {
+        // Kembalikan style jika gagal
+        if (tableContainer) tableContainer.style.overflow = origOverflow;
+        captureArea.style.width = origWidth;
+        console.error('Gagal mengambil gambar:', error);
+    });
+}
     </script>
 </body>
 </html>
